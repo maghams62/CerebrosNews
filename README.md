@@ -45,11 +45,16 @@ Open http://localhost:3000 in your browser.
 
 ## What I'd build with more time
 
-- Personalization that actually learns over time (behavior-aware, cross-session learning)
-- Stronger claim verification and source reliability weighting
-- Better multi-perspective story grouping (multiple narratives per story)
-- Real-time social signal ingestion and filtering (e.g., Twitter)
-- System-wide guardrails and evaluation for reliability at scale
+- Personalization that actually learns over time  
+  Right now personalization is heuristics-based. With more time, I’d make it learn from user behavior across sessions (what you read, skip, scroll, or explore).
+- Stronger claim verification and source reliability  
+  Trust is core to how I consume information. I’d separate high-signal vs low-signal sources and weigh them differently — currently all citations are treated equally.
+- Better multi-perspective story grouping  
+  News shouldn’t be consumed from a single author or lens. I’d improve clustering so each story shows multiple narratives and biases together in one place.
+- Real-time social signal ingestion  
+  A lot of important information appears first on social platforms. I’d add a pipeline to ingest and filter high-signal posts (e.g. Twitter) before elevating them into the feed.
+- System-wide guardrails and evaluation  
+  Add stronger guardrails and internal checks so summaries, verification, and clustering stay reliable as the system scales.
 
 ## Scripts (optional)
 
