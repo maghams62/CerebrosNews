@@ -4,7 +4,7 @@ This repository contains the CerebroNews web app (Next.js) plus dataset utilitie
 
 ## Components at a Glance
 
-- ENV (keys): `.env.local` and `.env`
+- ENV (keys): `.env`
   - OpenAI key for the ask flow: `OPENAI_API_KEY`.
 - Data scripts (build/enrich): `scripts/`
   - Dataset builder, tagging, trust fields backfill, and story group curation.
@@ -25,35 +25,28 @@ This repository contains the CerebroNews web app (Next.js) plus dataset utilitie
 
 ## Setup
 
-Create a `.env.local` file and add your OpenAI key:
+Create a `.env` file in `web/` and add your OpenAI key:
 
 ```env
-OPENAI_API_KEY=your_key_here
-```
-
-Then copy it to `.env` using the same key name:
-
-```bash
-cp .env.local .env
+OPENAI_API_KEY=sk-your-openai-api-key
 ```
 
 ## Quick Start
 
-Run everything from the `web/` directory:
-
 ```bash
+cd web
 npm install
-npm run dev:onboarding
+npm run onboarding
 ```
 
 Open http://localhost:3000 in your browser.
 
 ## Environment Variables
 
-Example `.env.local` (then copy to `.env`):
+Example `.env`:
 
 ```env
-OPENAI_API_KEY=your_key_here
+OPENAI_API_KEY=sk-your-openai-api-key
 ```
 
 - `OPENAI_API_KEY`: Enables the ask flow in the feed UI.
