@@ -1,0 +1,43 @@
+{
+  "name": "web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "dev:onboarding": "NEXT_PUBLIC_ONBOARDING=1 next dev",
+    "dev:no-onboarding": "NEXT_PUBLIC_ONBOARDING=0 next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "build:dataset": "tsx scripts/buildDataset.ts",
+    "tag:dataset": "tsx scripts/tagDataset.ts",
+    "build:storygroups": "tsx scripts/curateStoryGroups.ts",
+    "test:storygroups": "tsx --test tests/clusterStoryGroups.test.ts"
+  },
+  "dependencies": {
+    "@atproto/api": "^0.13.35",
+    "@mozilla/readability": "^0.5.0",
+    "cheerio": "^1.0.0-rc.12",
+    "framer-motion": "^12.26.2",
+    "image-size": "^1.1.1",
+    "jsdom": "^25.0.1",
+    "next": "16.1.3",
+    "dotenv": "^16.4.7",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "rss-parser": "^3.13.0",
+    "swiper": "^12.0.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/jsdom": "^21.1.6",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.3",
+    "tailwindcss": "^4",
+    "tsx": "^4.19.3",
+    "typescript": "^5"
+  }
+}

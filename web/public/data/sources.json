@@ -1,0 +1,665 @@
+{
+  "sources": [
+    {
+      "id": "techcrunch",
+      "name": "TechCrunch",
+      "homepage": "https://techcrunch.com",
+      "type": "editorial",
+      "rss": "https://techcrunch.com/feed/",
+      "bias": null
+    },
+    {
+      "id": "theverge",
+      "name": "The Verge",
+      "homepage": "https://www.theverge.com",
+      "type": "editorial",
+      "rss": "https://www.theverge.com/rss/index.xml",
+      "bias": null
+    },
+    {
+      "id": "wired",
+      "name": "WIRED",
+      "homepage": "https://www.wired.com",
+      "type": "editorial",
+      "rss": "https://www.wired.com/feed/rss",
+      "bias": null
+    },
+    {
+      "id": "platformer",
+      "name": "Platformer",
+      "homepage": "https://www.platformer.news",
+      "type": "editorial",
+      "rss": "https://www.platformer.news/feed",
+      "bias": null
+    },
+    {
+      "id": "noahpinion",
+      "name": "Noahpinion",
+      "homepage": "https://www.noahpinion.blog",
+      "type": "editorial",
+      "rss": "https://www.noahpinion.blog/feed",
+      "bias": null
+    },
+    {
+      "id": "arstechnica",
+      "name": "Ars Technica",
+      "homepage": "https://arstechnica.com",
+      "type": "editorial",
+      "rss": "https://feeds.arstechnica.com/arstechnica/index/",
+      "bias": null
+    },
+    {
+      "id": "venturebeat",
+      "name": "VentureBeat",
+      "homepage": "https://venturebeat.com",
+      "type": "editorial",
+      "rss": "https://venturebeat.com/feed/",
+      "bias": null
+    },
+    {
+      "id": "engadget",
+      "name": "Engadget",
+      "homepage": "https://www.engadget.com",
+      "type": "editorial",
+      "rss": "https://www.engadget.com/rss.xml",
+      "bias": null
+    },
+    {
+      "id": "theguardian",
+      "name": "The Guardian",
+      "homepage": "https://www.theguardian.com/uk/technology",
+      "type": "editorial",
+      "rss": "https://www.theguardian.com/uk/technology/rss",
+      "bias": null
+    },
+    {
+      "id": "reuters",
+      "name": "Reuters",
+      "homepage": "https://www.reuters.com/technology/",
+      "type": "editorial",
+      "rss": "https://feeds.reuters.com/reuters/technologyNews",
+      "bias": null
+    },
+    {
+      "id": "wsj",
+      "name": "The Wall Street Journal",
+      "homepage": "https://www.wsj.com/news/technology",
+      "type": "editorial",
+      "rss": "https://feeds.a.dj.com/rss/RSSWSJD.xml",
+      "bias": null
+    },
+    {
+      "id": "bloomberg",
+      "name": "Bloomberg",
+      "homepage": "https://www.bloomberg.com/technology",
+      "type": "editorial",
+      "rss": "https://www.bloomberg.com/feeds/technology/rss",
+      "bias": null
+    },
+    {
+      "id": "apnews",
+      "name": "AP News",
+      "homepage": "https://apnews.com/hub/technology",
+      "type": "editorial",
+      "rss": "https://apnews.com/apf-topnews?output=rss",
+      "bias": null
+    },
+    {
+      "id": "theregister",
+      "name": "The Register",
+      "homepage": "https://www.theregister.com",
+      "type": "editorial",
+      "rss": "https://www.theregister.com/headlines.atom",
+      "bias": null
+    },
+    {
+      "id": "zdnet",
+      "name": "ZDNet",
+      "homepage": "https://www.zdnet.com",
+      "type": "editorial",
+      "rss": "https://www.zdnet.com/news/rss.xml",
+      "bias": null
+    },
+    {
+      "id": "mittechreview",
+      "name": "MIT Technology Review",
+      "homepage": "https://www.technologyreview.com",
+      "type": "editorial",
+      "rss": "https://www.technologyreview.com/feed/",
+      "bias": null
+    },
+    {
+      "id": "ieeespectrum",
+      "name": "IEEE Spectrum",
+      "homepage": "https://spectrum.ieee.org",
+      "type": "editorial",
+      "rss": "https://spectrum.ieee.org/rss/fulltext",
+      "bias": null
+    },
+    {
+      "id": "slashdot",
+      "name": "Slashdot",
+      "homepage": "https://slashdot.org",
+      "type": "community",
+      "rss": "http://rss.slashdot.org/Slashdot/slashdotMain",
+      "bias": null
+    },
+    {
+      "id": "thehackernews",
+      "name": "The Hacker News",
+      "homepage": "https://thehackernews.com",
+      "type": "editorial",
+      "rss": "https://thehackernews.com/feeds/posts/default?alt=rss",
+      "bias": null
+    },
+    {
+      "id": "bleepingcomputer",
+      "name": "BleepingComputer",
+      "homepage": "https://www.bleepingcomputer.com",
+      "type": "editorial",
+      "rss": "https://www.bleepingcomputer.com/feed/",
+      "bias": null
+    },
+    {
+      "id": "krebsonsecurity",
+      "name": "KrebsOnSecurity",
+      "homepage": "https://krebsonsecurity.com",
+      "type": "editorial",
+      "rss": "https://krebsonsecurity.com/feed/",
+      "bias": null
+    },
+    {
+      "id": "infoq",
+      "name": "InfoQ",
+      "homepage": "https://www.infoq.com",
+      "type": "editorial",
+      "rss": "https://feed.infoq.com/",
+      "bias": null
+    },
+    {
+      "id": "githubblog",
+      "name": "GitHub Blog",
+      "homepage": "https://github.blog",
+      "type": "primary",
+      "rss": "https://github.blog/feed/",
+      "bias": null
+    },
+    {
+      "id": "openai",
+      "name": "OpenAI",
+      "homepage": "https://openai.com/blog",
+      "type": "primary",
+      "rss": "https://openai.com/blog/rss.xml",
+      "bias": null
+    },
+    {
+      "id": "google",
+      "name": "Google Blog",
+      "homepage": "https://blog.google",
+      "type": "primary",
+      "rss": "https://blog.google/rss",
+      "bias": null
+    },
+    {
+      "id": "apple",
+      "name": "Apple Newsroom",
+      "homepage": "https://www.apple.com/newsroom/",
+      "type": "primary",
+      "rss": "https://www.apple.com/newsroom/rss-feed.rss",
+      "bias": null
+    },
+    {
+      "id": "microsoft",
+      "name": "Microsoft Blog",
+      "homepage": "https://blogs.microsoft.com/blog/",
+      "type": "primary",
+      "rss": "https://blogs.microsoft.com/feed/",
+      "bias": null
+    },
+    {
+      "id": "meta",
+      "name": "Meta Newsroom",
+      "homepage": "https://about.fb.com/news/",
+      "type": "primary",
+      "rss": "https://about.fb.com/news/feed/",
+      "bias": null
+    },
+    {
+      "id": "nvidia",
+      "name": "NVIDIA Blog",
+      "homepage": "https://blogs.nvidia.com",
+      "type": "primary",
+      "rss": "https://blogs.nvidia.com/feed/",
+      "bias": null
+    },
+    {
+      "id": "anthropic",
+      "name": "Anthropic",
+      "homepage": "https://www.anthropic.com/news",
+      "type": "primary",
+      "rss": "https://www.anthropic.com/news/rss.xml",
+      "bias": null
+    },
+    {
+      "id": "smashingmagazine",
+      "name": "Smashing Magazine",
+      "homepage": "https://www.smashingmagazine.com",
+      "type": "editorial",
+      "rss": "https://www.smashingmagazine.com/feed/",
+      "bias": null
+    },
+    {
+      "id": "awsblog",
+      "name": "AWS News Blog",
+      "homepage": "https://aws.amazon.com/blogs/aws/",
+      "type": "primary",
+      "rss": "https://aws.amazon.com/blogs/aws/feed/",
+      "bias": null
+    },
+    {
+      "id": "googlecloudblog",
+      "name": "Google Cloud Blog",
+      "homepage": "https://cloud.google.com/blog",
+      "type": "primary",
+      "rss": "https://cloud.google.com/blog/rss/",
+      "bias": null
+    },
+    {
+      "id": "azureblog",
+      "name": "Azure Updates",
+      "homepage": "https://azure.microsoft.com/en-us/updates/",
+      "type": "primary",
+      "rss": "https://azure.microsoft.com/en-us/updates/feed/",
+      "bias": null
+    },
+    {
+      "id": "hackernews",
+      "name": "Hacker News",
+      "homepage": "https://news.ycombinator.com",
+      "type": "community",
+      "rss": "https://news.ycombinator.com/rss",
+      "logoUrl": "https://news.ycombinator.com/favicon.ico",
+      "bias": null
+    },
+    {
+      "id": "lobsters",
+      "name": "Lobsters",
+      "homepage": "https://lobste.rs",
+      "type": "community",
+      "rss": "https://lobste.rs/rss",
+      "logoUrl": "https://lobste.rs/favicon.ico",
+      "bias": null
+    },
+    {
+      "id": "reddit_technology",
+      "name": "Reddit r/technology",
+      "homepage": "https://www.reddit.com/r/technology/",
+      "type": "community",
+      "rss": "https://www.reddit.com/r/technology/.rss",
+      "logoUrl": "https://www.redditstatic.com/desktop2x/img/favicon/favicon-96x96.png",
+      "bias": null
+    },
+    {
+      "id": "reddit_programming",
+      "name": "Reddit r/programming",
+      "homepage": "https://www.reddit.com/r/programming/",
+      "type": "community",
+      "rss": "https://www.reddit.com/r/programming/.rss",
+      "logoUrl": "https://www.redditstatic.com/desktop2x/img/favicon/favicon-96x96.png",
+      "bias": null
+    },
+    {
+      "id": "reddit_machinelearning",
+      "name": "Reddit r/MachineLearning",
+      "homepage": "https://www.reddit.com/r/MachineLearning/",
+      "type": "community",
+      "rss": "https://www.reddit.com/r/MachineLearning/.rss",
+      "logoUrl": "https://www.redditstatic.com/desktop2x/img/favicon/favicon-96x96.png",
+      "bias": null
+    },
+    {
+      "id": "ycombinator_blog",
+      "name": "Y Combinator Blog",
+      "homepage": "https://blog.ycombinator.com",
+      "type": "vc_blog",
+      "rss": "https://blog.ycombinator.com/rss/",
+      "bias": null
+    },
+    {
+      "id": "a16z",
+      "name": "a16z",
+      "homepage": "https://a16z.com",
+      "type": "vc_blog",
+      "rss": "https://a16z.com/feed/",
+      "bias": null
+    },
+    {
+      "id": "a16zfuture",
+      "name": "Future (a16z)",
+      "homepage": "https://future.a16z.com",
+      "type": "vc_blog",
+      "rss": "https://future.a16z.com/feed/",
+      "bias": null
+    },
+    {
+      "id": "avc",
+      "name": "AVC",
+      "homepage": "https://avc.com",
+      "type": "vc_blog",
+      "rss": "https://avc.com/feed/",
+      "bias": null
+    },
+    {
+      "id": "bothsides",
+      "name": "Both Sides of the Table",
+      "homepage": "https://bothsidesofthetable.com",
+      "type": "vc_blog",
+      "rss": "https://bothsidesofthetable.com/feed/",
+      "bias": null
+    },
+    {
+      "id": "tomtunguz",
+      "name": "Tomasz Tunguz",
+      "homepage": "https://tomtunguz.com",
+      "type": "vc_blog",
+      "rss": "https://tomtunguz.com/index.xml",
+      "bias": null
+    },
+    {
+      "id": "mattturck",
+      "name": "Matt Turck",
+      "homepage": "https://mattturck.com",
+      "type": "vc_blog",
+      "rss": "https://mattturck.com/feed",
+      "bias": null
+    },
+    {
+      "id": "forentrepreneurs",
+      "name": "For Entrepreneurs",
+      "homepage": "https://www.forentrepreneurs.com",
+      "type": "vc_blog",
+      "rss": "https://feeds.feedburner.com/forentrepreneurs",
+      "bias": null
+    },
+    {
+      "id": "vccafe",
+      "name": "VC Cafe",
+      "homepage": "https://vccafe.com",
+      "type": "vc_blog",
+      "rss": "https://vccafe.com/feed",
+      "bias": null
+    },
+    {
+      "id": "lifescivc",
+      "name": "LifeSciVC",
+      "homepage": "https://lifescivc.com",
+      "type": "vc_blog",
+      "rss": "https://lifescivc.com/feed",
+      "bias": null
+    },
+    {
+      "id": "samaltman",
+      "name": "Sam Altman",
+      "homepage": "https://blog.samaltman.com",
+      "type": "vc_blog",
+      "rss": "https://blog.samaltman.com/posts.atom",
+      "bias": null
+    },
+    {
+      "id": "producthunt",
+      "name": "Product Hunt",
+      "homepage": "https://www.producthunt.com",
+      "type": "community",
+      "rss": "https://www.producthunt.com/feed",
+      "bias": null
+    },
+    {
+      "id": "techmeme",
+      "name": "Techmeme",
+      "homepage": "https://www.techmeme.com",
+      "type": "aggregator",
+      "rss": "https://www.techmeme.com/feed.xml",
+      "bias": null
+    },
+    {
+      "id": "thenextweb",
+      "name": "The Next Web",
+      "homepage": "https://thenextweb.com",
+      "type": "editorial",
+      "rss": "https://thenextweb.com/feed",
+      "bias": null
+    },
+    {
+      "id": "digitaltrends",
+      "name": "Digital Trends",
+      "homepage": "https://www.digitaltrends.com",
+      "type": "editorial",
+      "rss": "https://www.digitaltrends.com/feed/",
+      "bias": null
+    },
+    {
+      "id": "gizmodo",
+      "name": "Gizmodo",
+      "homepage": "https://gizmodo.com",
+      "type": "editorial",
+      "rss": "https://gizmodo.com/rss",
+      "bias": null
+    },
+    {
+      "id": "cnet_news",
+      "name": "CNET News",
+      "homepage": "https://www.cnet.com/news/",
+      "type": "editorial",
+      "rss": "https://www.cnet.com/rss/news/",
+      "bias": null
+    },
+    {
+      "id": "tomshardware",
+      "name": "Tom's Hardware",
+      "homepage": "https://www.tomshardware.com",
+      "type": "editorial",
+      "rss": "https://www.tomshardware.com/feeds/all",
+      "bias": null
+    },
+    {
+      "id": "anandtech",
+      "name": "AnandTech",
+      "homepage": "https://www.anandtech.com",
+      "type": "editorial",
+      "rss": "https://www.anandtech.com/rss/",
+      "bias": null
+    },
+    {
+      "id": "androidpolice",
+      "name": "Android Police",
+      "homepage": "https://www.androidpolice.com",
+      "type": "editorial",
+      "rss": "https://www.androidpolice.com/feed/",
+      "bias": null
+    },
+    {
+      "id": "9to5google",
+      "name": "9to5Google",
+      "homepage": "https://9to5google.com",
+      "type": "editorial",
+      "rss": "https://9to5google.com/feed/",
+      "bias": null
+    },
+    {
+      "id": "9to5mac",
+      "name": "9to5Mac",
+      "homepage": "https://9to5mac.com",
+      "type": "editorial",
+      "rss": "https://9to5mac.com/feed/",
+      "bias": null
+    },
+    {
+      "id": "macrumors",
+      "name": "MacRumors",
+      "homepage": "https://www.macrumors.com",
+      "type": "editorial",
+      "rss": "https://www.macrumors.com/macrumors.xml",
+      "bias": null
+    },
+    {
+      "id": "xdadevelopers",
+      "name": "XDA Developers",
+      "homepage": "https://www.xda-developers.com",
+      "type": "editorial",
+      "rss": "https://www.xda-developers.com/feed/",
+      "bias": null
+    },
+    {
+      "id": "techradar",
+      "name": "TechRadar",
+      "homepage": "https://www.techradar.com",
+      "type": "editorial",
+      "rss": "https://www.techradar.com/rss",
+      "bias": null
+    },
+    {
+      "id": "securityweek",
+      "name": "SecurityWeek",
+      "homepage": "https://www.securityweek.com",
+      "type": "editorial",
+      "rss": "https://www.securityweek.com/feed/",
+      "bias": null
+    },
+    {
+      "id": "schneier",
+      "name": "Schneier on Security",
+      "homepage": "https://www.schneier.com",
+      "type": "editorial",
+      "rss": "https://www.schneier.com/feed/atom/",
+      "bias": null
+    },
+    {
+      "id": "google_security",
+      "name": "Google Security Blog",
+      "homepage": "https://security.googleblog.com",
+      "type": "primary",
+      "rss": "https://security.googleblog.com/atom.xml",
+      "bias": null
+    },
+    {
+      "id": "msrc",
+      "name": "Microsoft Security Response Center",
+      "homepage": "https://msrc.microsoft.com/blog/",
+      "type": "primary",
+      "rss": "https://msrc.microsoft.com/blog/feed/",
+      "bias": null
+    },
+    {
+      "id": "cloudflare",
+      "name": "Cloudflare Blog",
+      "homepage": "https://blog.cloudflare.com",
+      "type": "primary",
+      "rss": "https://blog.cloudflare.com/rss/",
+      "bias": null
+    },
+    {
+      "id": "netflixtechblog",
+      "name": "Netflix TechBlog",
+      "homepage": "https://netflixtechblog.com",
+      "type": "primary",
+      "rss": "https://netflixtechblog.com/feed",
+      "bias": null
+    },
+    {
+      "id": "uberengineering",
+      "name": "Uber Engineering",
+      "homepage": "https://www.uber.com/blog/engineering/",
+      "type": "primary",
+      "rss": "https://www.uber.com/blog/engineering/rss/",
+      "bias": null
+    },
+    {
+      "id": "stripeblog",
+      "name": "Stripe Blog",
+      "homepage": "https://stripe.com/blog",
+      "type": "primary",
+      "rss": "https://stripe.com/blog/feed.rss",
+      "bias": null
+    },
+    {
+      "id": "airbnbeng",
+      "name": "Airbnb Engineering",
+      "homepage": "https://medium.com/airbnb-engineering",
+      "type": "primary",
+      "rss": "https://medium.com/feed/airbnb-engineering",
+      "bias": null
+    },
+    {
+      "id": "dropboxtech",
+      "name": "Dropbox Tech",
+      "homepage": "https://dropbox.tech",
+      "type": "primary",
+      "rss": "https://dropbox.tech/feed",
+      "bias": null
+    },
+    {
+      "id": "slackengineering",
+      "name": "Slack Engineering",
+      "homepage": "https://slack.engineering",
+      "type": "primary",
+      "rss": "https://slack.engineering/feed/",
+      "bias": null
+    },
+    {
+      "id": "datadog",
+      "name": "Datadog Blog",
+      "homepage": "https://www.datadoghq.com/blog/",
+      "type": "primary",
+      "rss": "https://www.datadoghq.com/blog/rss/",
+      "bias": null
+    },
+    {
+      "id": "fastly",
+      "name": "Fastly Blog",
+      "homepage": "https://www.fastly.com/blog",
+      "type": "primary",
+      "rss": "https://www.fastly.com/blog/rss.xml",
+      "bias": null
+    },
+    {
+      "id": "vercel",
+      "name": "Vercel Blog",
+      "homepage": "https://vercel.com/blog",
+      "type": "primary",
+      "rss": "https://vercel.com/blog/rss.xml",
+      "bias": null
+    },
+    {
+      "id": "netlify",
+      "name": "Netlify Blog",
+      "homepage": "https://www.netlify.com/blog/",
+      "type": "primary",
+      "rss": "https://www.netlify.com/blog/rss/",
+      "bias": null
+    },
+    {
+      "id": "hashicorp",
+      "name": "HashiCorp Blog",
+      "homepage": "https://www.hashicorp.com/blog",
+      "type": "primary",
+      "rss": "https://www.hashicorp.com/blog/feed",
+      "bias": null
+    },
+    {
+      "id": "gitlab",
+      "name": "GitLab Blog",
+      "homepage": "https://about.gitlab.com/blog/",
+      "type": "primary",
+      "rss": "https://about.gitlab.com/atom.xml",
+      "bias": null
+    },
+    {
+      "id": "googlenews",
+      "name": "Google News",
+      "homepage": "https://news.google.com",
+      "type": "aggregator",
+      "rss": null,
+      "bias": null
+    }
+  ]
+}

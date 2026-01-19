@@ -1,0 +1,35 @@
+[
+  {
+    "id": "a1",
+    "sourceId": "techcrunch",
+    "sourceName": "TechCrunch",
+    "sourceType": "editorial",
+    "title": "Startup X raises $50M to build AI chips",
+    "url": "https://example.com/a1",
+    "publishedAt": "2026-01-10T10:00:00Z",
+    "summary": "Startup X announced a $50M round to build AI accelerators for edge devices.",
+    "tags": ["ai", "hardware_gpu"]
+  },
+  {
+    "id": "a2",
+    "sourceId": "theverge",
+    "sourceName": "The Verge",
+    "sourceType": "editorial",
+    "title": "Startup X lands $50M to build an AI chip for edge devices",
+    "url": "https://example.com/a2",
+    "publishedAt": "2026-01-10T11:00:00Z",
+    "summary": "The company says the chip targets low-power inference and automotive use cases.",
+    "tags": ["ai", "hardware_gpu"]
+  },
+  {
+    "id": "a3",
+    "sourceId": "arstechnica",
+    "sourceName": "Ars Technica",
+    "sourceType": "editorial",
+    "title": "Critics question Startup X's $50M AI chip roadmap",
+    "url": "https://example.com/a3",
+    "publishedAt": "2026-01-10T12:00:00Z",
+    "summary": "Analysts warn the company faces manufacturing and supply-chain risks.",
+    "tags": ["ai", "hardware_gpu"]
+  }
+]

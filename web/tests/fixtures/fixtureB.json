@@ -1,0 +1,46 @@
+[
+  {
+    "id": "b1",
+    "sourceId": "wired",
+    "sourceName": "Wired",
+    "sourceType": "editorial",
+    "title": "AWS launches a new cloud region in Spain",
+    "url": "https://example.com/b1",
+    "publishedAt": "2026-01-09T09:00:00Z",
+    "summary": "The new region expands AWS availability zones in Europe.",
+    "tags": ["backend", "policy"]
+  },
+  {
+    "id": "b2",
+    "sourceId": "zdnet",
+    "sourceName": "ZDNet",
+    "sourceType": "editorial",
+    "title": "Amazon opens its latest AWS region in Spain",
+    "url": "https://example.com/b2",
+    "publishedAt": "2026-01-09T10:00:00Z",
+    "summary": "AWS says the region will support regulated industries.",
+    "tags": ["backend", "policy"]
+  },
+  {
+    "id": "b3",
+    "sourceId": "theverge",
+    "sourceName": "The Verge",
+    "sourceType": "editorial",
+    "title": "Amazon reveals new Alexa devices for 2026",
+    "url": "https://example.com/b3",
+    "publishedAt": "2026-01-09T11:00:00Z",
+    "summary": "The devices focus on multi-room audio and AI voice assistants.",
+    "tags": ["hardware_gpu", "ai"]
+  },
+  {
+    "id": "b4",
+    "sourceId": "engadget",
+    "sourceName": "Engadget",
+    "sourceType": "editorial",
+    "title": "Amazon's 2026 Alexa lineup adds new smart speakers",
+    "url": "https://example.com/b4",
+    "publishedAt": "2026-01-09T12:00:00Z",
+    "summary": "Engadget reports on new smart speakers and an upgraded assistant.",
+    "tags": ["hardware_gpu", "ai"]
+  }
+]

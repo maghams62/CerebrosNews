@@ -1,0 +1,17 @@
+<svg width="36px" height="50px" viewBox="0 0 36 50" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>50px (Height) Output</title>
+    <g id="50px-(Height)-Output" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Primary-Product-Icon-(Trial)" transform="translate(0.000000, 6.000000)" stroke="#000000">
+            <g id="Phone">
+                <rect stroke-width="2" fill="#FFF1E5" x="1" y="1" width="26" height="42" rx="5"></rect>
+                <line x1="9.5" y1="39.5" x2="18.5" y2="39.5" id="Line-(Bottom)" stroke-width="1.5" stroke-linecap="round"></line>
+                <line x1="9.5" y1="4.5" x2="18.5" y2="4.5" id="Line-(Top)" stroke-width="1.5" stroke-linecap="round"></line>
+            </g>
+            <g id="Clock" transform="translate(20.000000, 15.000000)" stroke-width="2">
+                <circle id="Container" fill="#FFF1E5" cx="7" cy="7" r="8"></circle>
+                <line x1="9.25" y1="4.75" x2="9.25" y2="9.25" id="Line-(Horizontal)" stroke-linecap="round" transform="translate(9.250000, 7.000000) rotate(-90.000000) translate(-9.250000, -7.000000)"></line>
+                <line x1="7" y1="2.5" x2="7" y2="7" id="Line-(Vertical)" stroke-linecap="round"></line>
+            </g>
+        </g>
+    </g>
+</svg>

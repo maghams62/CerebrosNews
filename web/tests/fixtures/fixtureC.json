@@ -1,0 +1,13 @@
+[
+  {
+    "id": "c1",
+    "sourceId": "techcrunch",
+    "sourceName": "TechCrunch",
+    "sourceType": "editorial",
+    "title": "Solo startup launches a developer tool for logs",
+    "url": "https://example.com/c1",
+    "publishedAt": "2026-01-08T08:00:00Z",
+    "summary": "A single-source announcement for a new logging platform.",
+    "tags": ["devtools", "backend"]
+  }
+]
