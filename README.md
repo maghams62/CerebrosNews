@@ -38,6 +38,19 @@ npm run onboarding
 
 Open http://localhost:3000 in your browser.
 
+## AI tools used
+
+- Cursor for coding, planning, and debugging (using different models depending on task complexity)
+- ChatGPT for ideation, brainstorming, and as my personal UI/UX thought partner
+
+## What I'd build with more time
+
+- Personalization that actually learns over time (behavior-aware, cross-session learning)
+- Stronger claim verification and source reliability weighting
+- Better multi-perspective story grouping (multiple narratives per story)
+- Real-time social signal ingestion and filtering (e.g., Twitter)
+- System-wide guardrails and evaluation for reliability at scale
+
 ## Scripts (optional)
 
 Dataset and curation scripts are under `web/scripts/`.
