@@ -465,7 +465,12 @@ export default function OnboardingPage() {
                       "inset 0 1px 0 rgba(255,255,255,0.20), inset 0 -1px 0 rgba(0,0,0,0.25), 0 40px 120px rgba(0,0,0,0.55)",
                   }}
                 />
-                <div className="relative">{renderPanel(step)}</div>
+                <div className="relative">
+                  <div className="mb-6 text-center text-xs font-semibold uppercase tracking-[0.2em] text-indigo-200/80">
+                    Hi from CerebroNews
+                  </div>
+                  {renderPanel(step)}
+                </div>
               </div>
             </motion.div>
           </AnimatePresence>
