@@ -38,7 +38,7 @@ OPENAI_API_KEY=sk-your-openai-api-key
 ```bash
 cd web
 npm install
-npm run onboarding
+npm run dev:onboarding
 ```
 
 Open http://localhost:3000 in your browser.
