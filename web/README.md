@@ -4,13 +4,10 @@ This repository contains the CerebroNews web app (Next.js) plus dataset utilitie
 
 ## Components at a Glance
 
-- ENV (keys and connectors): `.env.local`
+- ENV (keys): `.env.local` and `.env`
   - OpenAI key for the ask flow: `OPENAI_API_KEY`.
-  - Optional Bluesky connector credentials: `BLUESKY_EMAIL`, `BLUESKY_PASSWORD`, `BLUESKY_HANDLE`, `BLUESKY_SERVICE`.
 - Data scripts (build/enrich): `scripts/`
   - Dataset builder, tagging, trust fields backfill, and story group curation.
-
-These two areas are the primary drivers; the rest of the app consumes them.
 
 ## Index
 - [Prerequisites](#prerequisites)
@@ -28,12 +25,16 @@ These two areas are the primary drivers; the rest of the app consumes them.
 
 ## Setup
 
-- Environment variables are already provided via `.env.local.example`.
-  - Copy it to `.env.local` and add your OpenAI key.
-  - Optional: add Bluesky credentials if you want social signal items.
+Create a `.env.local` file and add your OpenAI key:
+
+```env
+OPENAI_API_KEY=your_key_here
+```
+
+Then copy it to `.env` using the same key name:
 
 ```bash
-cp .env.local.example .env.local
+cp .env.local .env
 ```
 
 ## Quick Start
@@ -42,26 +43,20 @@ Run everything from the `web/` directory:
 
 ```bash
 npm install
-npm run build
-npm run dev:onboarding
+npm run onboarding
 ```
 
 Open http://localhost:3000 in your browser.
 
 ## Environment Variables
 
-Example `.env.local`:
+Example `.env.local` (then copy to `.env`):
 
 ```env
 OPENAI_API_KEY=your_key_here
-BLUESKY_EMAIL=...
-BLUESKY_PASSWORD=...
-BLUESKY_HANDLE=...
-BLUESKY_SERVICE=https://bsky.social
 ```
 
- - `OPENAI_API_KEY`: Enables the ask flow in the feed UI.
- - `BLUESKY_*`: Optional. Used to pull social signal items into the feed.
+- `OPENAI_API_KEY`: Enables the ask flow in the feed UI.
 
 ## API
 
@@ -83,4 +78,3 @@ BLUESKY_SERVICE=https://bsky.social
 ## Notes
 
 - The feed includes editorial, community, and social signals.
-- Bluesky is treated as a social signal layer, not a primary news source.
