@@ -43,7 +43,7 @@ Run everything from the `web/` directory:
 
 ```bash
 npm install
-npm run onboarding
+npm run dev:onboarding
 ```
 
 Open http://localhost:3000 in your browser.
