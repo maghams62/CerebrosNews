@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import path from "path";
+import { config as loadEnv } from "dotenv";
 
 export const runtime = "nodejs";
 
@@ -100,8 +102,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ tags: [], mode: "heuristic" as const });
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
-  const model = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
+  const env = loadEnv({ path: path.join(process.cwd(), ".env") }).parsed ?? {};
+  const apiKey = env.OPENAI_API_KEY;
+  const model = env.OPENAI_MODEL ?? "gpt-4o-mini";
 
   // Demo fallback: no key → heuristic.
   if (!apiKey) {
