@@ -15,6 +15,8 @@ This repository contains the CerebroNews web app (Next.js) plus dataset utilitie
 - [Quick Start](#quick-start)
 - [Environment Variables](#environment-variables)
 - [API](#api)
+- [AI Tools Used](#ai-tools-used)
+- [What I'd Build with More Time](#what-id-build-with-more-time)
 - [Data and Scripts](#data-and-scripts)
 - [Notes](#notes)
 
@@ -56,6 +58,19 @@ OPENAI_API_KEY=sk-your-openai-api-key
 - POST `/api/ask`
   - Body: `{ "question": "...", "context": "...", "summary": "..." }`
   - Returns: `{ "answer": "...", "sources": [...] }`
+
+## AI tools used
+
+- Cursor for coding, planning, and debugging (using different models depending on task complexity)
+- ChatGPT for ideation, brainstorming, and as my personal UI/UX thought partner
+
+## What I'd build with more time
+
+- Personalization that actually learns over time (behavior-aware, cross-session learning)
+- Stronger claim verification and source reliability weighting
+- Better multi-perspective story grouping (multiple narratives per story)
+- Real-time social signal ingestion and filtering (e.g., Twitter)
+- System-wide guardrails and evaluation for reliability at scale
 
 ## Data and Scripts
 
