@@ -5,20 +5,28 @@ The web app lives in the `web/` directory.
 
 ## Run the web app
 
+Repository layout (where to put `.env`):
+
+```
+CerebrosNews/
+  README.md
+  web/
+    .env  <-- create this file here
+    package.json
+    src/
+    ...
+```
+
+Quick start:
+
 ```bash
 cd web
 ```
 
-Create `.env.local` with your OpenAI key:
+Create `web/.env` with your OpenAI API key (copy-paste and replace the value):
 
 ```env
-OPENAI_API_KEY=your_key_here
-```
-
-Then copy it to `.env`:
-
-```bash
-cp .env.local .env
+OPENAI_API_KEY=sk-your-openai-api-key
 ```
 
 Install and run onboarding:
