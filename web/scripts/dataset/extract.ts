@@ -46,8 +46,9 @@ function readabilityExtract(html: string, url: string): { text: string | null; i
     const reader = new Readability(dom.window.document);
     const parsed = reader.parse();
     if (!parsed) return { text: null, image: null };
+    const parsedWithImage = parsed as typeof parsed & { image?: string };
     const text = parsed.textContent?.replace(/\s+/g, " ").trim() ?? null;
-    const image = parsed.image || null;
+    const image = parsedWithImage.image || null;
     return { text: text && text.length ? text : null, image };
   } catch {
     return { text: null, image: null };

@@ -437,12 +437,13 @@ export function FeedClient({
   const [liveGroups, setLiveGroups] = useState<StoryGroup[]>(initialStoryGroups ?? []);
 
   function storyGroupFromItem(item: FeedItem): StoryGroup {
+    const resolvedUrl = item.url ?? item.postUrl ?? "";
     const publishedAt = item.publishedAt ?? new Date().toISOString();
     const summaryBullets = item.bulletSummary ?? [];
     return {
       id: `solo:${item.id}`,
       canonicalTitle: item.title,
-      canonicalUrl: item.url,
+      canonicalUrl: item.url ?? item.postUrl ?? undefined,
       topicTags: item.tags ?? [],
       createdAt: publishedAt,
       updatedAt: publishedAt,
@@ -452,8 +453,8 @@ export function FeedClient({
           id: item.id,
           source: item.sourceName,
           sourceType: item.sourceType,
-          url: item.url,
-          canonicalUrl: item.url,
+          url: resolvedUrl,
+          canonicalUrl: item.url ?? item.postUrl ?? undefined,
           title: item.title,
           summary: item.summary,
           bias: "",
