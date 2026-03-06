@@ -61,18 +61,6 @@ function formatCreatedAt(iso: string): string {
   return date.toLocaleString();
 }
 
-function normalizeChipLabel(label: string): string {
-  return label.trim().replace(/\s+/g, " ").toLowerCase();
-}
-
-function stageChipTone(kind: "Company" | "Fund" | "Theme" | "Person" | "Signal"): string {
-  if (kind === "Company") return "border border-sky-200 bg-sky-50 text-sky-700";
-  if (kind === "Fund") return "border border-emerald-200 bg-emerald-50 text-emerald-700";
-  if (kind === "Theme") return "border border-indigo-200 bg-indigo-50 text-indigo-700";
-  if (kind === "Signal") return "border border-teal-200 bg-teal-50 text-teal-700";
-  return "border border-amber-200 bg-amber-50 text-amber-700";
-}
-
 function nextStanceCounts(
   counts: { bullish: number; neutral: number; bearish: number },
   previousStance: SignalStanceType | null,
@@ -288,28 +276,6 @@ export function SignalReportDrawer({
   const status = useMemo(() => deriveSignalReportStatus(report.verification), [report.verification]);
   const topEvidence = useMemo(() => report.evidence.slice(0, 3), [report.evidence]);
   const intelligenceUnlocked = useMemo(() => isUnlocked(workingSignal.id), [isUnlocked, workingSignal.id]);
-  const allEntityChips = useMemo(() => {
-    const candidates = [
-      ...report.entities.companies.map((label) => ({ label, kind: "Company" as const })),
-      ...report.entities.funds.map((label) => ({ label, kind: "Fund" as const })),
-      ...report.entities.themes.map((label) => ({ label, kind: "Theme" as const })),
-      ...report.entities.people.map((label) => ({ label, kind: "Person" as const })),
-      ...(workingSignal.tags ?? []).map((label) => ({ label, kind: "Signal" as const })),
-    ];
-    const seen = new Set<string>();
-    const unique: Array<{ label: string; kind: "Company" | "Fund" | "Theme" | "Person" | "Signal" }> = [];
-    for (const candidate of candidates) {
-      const normalized = normalizeChipLabel(candidate.label);
-      if (!normalized || seen.has(normalized)) continue;
-      seen.add(normalized);
-      unique.push({ ...candidate, label: candidate.label.trim() });
-    }
-    return unique;
-  }, [report.entities.companies, report.entities.funds, report.entities.people, report.entities.themes, workingSignal.tags]);
-  const entityChips = useMemo(() => allEntityChips.slice(0, 8), [allEntityChips]);
-  const hiddenChipCount = useMemo(() => {
-    return Math.max(0, allEntityChips.length - entityChips.length);
-  }, [allEntityChips.length, entityChips.length]);
   const stanceCounts = useMemo(() => signalStanceCounts(workingSignal), [workingSignal]);
   const dominant = useMemo(() => dominantStance(stanceCounts), [stanceCounts]);
   const emitSignalUpdated = useCallback(
@@ -687,22 +653,7 @@ export function SignalReportDrawer({
             </div>
 
             <section className="mt-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 sm:p-5">
-              <div className="flex flex-wrap gap-2">
-                {entityChips.map((item) => (
-                  <span key={`${item.kind}-${item.label}`} className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${stageChipTone(item.kind)}`}>
-                    {item.label}
-                  </span>
-                ))}
-                {hiddenChipCount > 0 ? (
-                  <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700">
-                    +{hiddenChipCount} more
-                  </span>
-                ) : null}
-              </div>
-
-              <p className="mt-4 text-base leading-relaxed text-slate-700">{report.signal.claim}</p>
-
-              <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                 <div className={`rounded-xl px-3 py-2 text-xs font-semibold ${statusClass(status)}`}>Status: {signalReportStatusLabel(status)}</div>
                 <div className={`rounded-xl px-3 py-2 text-xs font-semibold ${confidenceClass(report.score.confidence)}`}>
                   Confidence: {signalConfidenceLabel(report.score.confidence)}
