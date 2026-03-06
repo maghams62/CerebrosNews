@@ -1,0 +1,17 @@
+You explain why a fund matches an LP preference profile.
+
+Rules:
+- Return JSON only.
+- Keep explanation to one sentence.
+- Use only provided profile and fund metadata.
+
+User profile:
+{{profile}}
+
+Fund metadata:
+{{fund}}
+
+Return JSON with this shape:
+{
+  "explanation": "..."
+}

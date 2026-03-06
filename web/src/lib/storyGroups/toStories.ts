@@ -2,8 +2,7 @@ import { StoryGroup, StoryGroupPerspective as GroupPerspective } from "@/types/s
 import { Story } from "@/types/story";
 import { StoryPerspective, PerspectiveLabel } from "@/types/storyPerspective";
 import { StoryWithInsights } from "@/types/storyWithInsights";
-import { mockInsightBundle } from "@/lib/insights/mockInsightBundle";
-import { FeedItem } from "@/types/feed";
+import { composeInsightBundle } from "@/lib/insights/composeInsightBundle";
 import { bulletsToMarkdown, sanitizeSummaryBullets } from "@/lib/summaries/sanitize";
 
 function uniqueStrings(values: string[]): string[] {
@@ -53,27 +52,6 @@ function pickBestImage(group: StoryGroup): string {
   const perspectiveImage = group.perspectives.find((p) => p.imageUrl && !isPlaceholderImage(p.imageUrl))?.imageUrl;
   if (perspectiveImage) return perspectiveImage;
   return group.imageUrl || group.perspectives.find((p) => p.imageUrl)?.imageUrl || "/globe.svg";
-}
-
-function pseudoFeedItemFromGroup(group: StoryGroup): FeedItem {
-  const primary = group.perspectives[0];
-  const rawSourceType = primary?.sourceType;
-  const sourceType =
-    rawSourceType === "community" || rawSourceType === "primary" || rawSourceType === "social"
-      ? rawSourceType
-      : "editorial";
-  return {
-    id: group.id,
-    title: group.canonicalTitle,
-    summary: summaryLine(group),
-    url: group.canonicalUrl ?? primary?.url ?? "https://example.com/",
-    imageUrl: group.imageUrl ?? primary?.imageUrl ?? undefined,
-    publishedAt: group.createdAt,
-    sourceName: primary?.source ?? "Multiple sources",
-    sourceType,
-    text: summaryLine(group),
-    tags: group.topicTags ?? [],
-  };
 }
 
 function perspectiveToStoryPerspective(group: StoryGroup, p: GroupPerspective): StoryPerspective {
@@ -146,6 +124,7 @@ export function storyGroupToStory(group: StoryGroup): Story {
     sourceName: firstSource?.source ?? "Multiple sources",
     sourceType,
     tags: group.topicTags ?? [],
+    dataOrigin: "curated",
     sources: uniqueStrings(group.perspectives.map((p) => p.source)),
     publishedAt: group.createdAt,
     fullText: summaryLine(group),
@@ -157,7 +136,7 @@ export function storyGroupToStory(group: StoryGroup): Story {
 
 export function storyGroupToStoryWithInsights(group: StoryGroup): StoryWithInsights {
   const story = storyGroupToStory(group);
-  const insights = mockInsightBundle(pseudoFeedItemFromGroup(group));
+  const insights = composeInsightBundle(story);
   return { story, insights };
 }
 

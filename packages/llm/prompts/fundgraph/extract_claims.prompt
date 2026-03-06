@@ -1,0 +1,31 @@
+You extract factual, atomic claims from a tech news article.
+
+Rules:
+- Return JSON only.
+- Output between 5 and 12 claims.
+- Each claim must be a factual statement, not opinion or prediction.
+- Keep claim text short and atomic.
+- The evidence snippet must be copied verbatim from the provided article text.
+- Do not invent entities or facts not present in the article.
+- Confidence is a number between 0 and 1.
+- Category must be one of: Funding, Product, Regulation, Partnership, Hiring, Legal, Market, Infrastructure, Research, Other.
+
+Article URL: {{url}}
+Article title: {{title}}
+Article text:
+{{content}}
+
+Return JSON with this shape:
+{
+  "claims": [
+    {
+      "claimText": "...",
+      "category": "Product",
+      "entities": ["..."],
+      "llmConfidence": 0.0,
+      "citation": {
+        "snippet": "..."
+      }
+    }
+  ]
+}

@@ -1,0 +1,144 @@
+{
+  "sources": [
+    {
+      "id": "techcrunch_startups",
+      "name": "TechCrunch Startups",
+      "homepage": "https://techcrunch.com/category/startups/",
+      "type": "editorial",
+      "rss": "https://techcrunch.com/category/startups/feed/"
+    },
+    {
+      "id": "techcrunch_venture_capital",
+      "name": "TechCrunch Venture Capital",
+      "homepage": "https://techcrunch.com/tag/venture-capital/",
+      "type": "editorial",
+      "rss": "https://techcrunch.com/tag/venture-capital/feed/"
+    },
+    {
+      "id": "crunchbase_news",
+      "name": "Crunchbase News",
+      "homepage": "https://news.crunchbase.com/",
+      "type": "editorial",
+      "rss": "https://news.crunchbase.com/feed/"
+    },
+    {
+      "id": "venturebeat_business",
+      "name": "VentureBeat Business",
+      "homepage": "https://venturebeat.com/category/business/",
+      "type": "editorial",
+      "rss": "https://venturebeat.com/category/business/feed/"
+    },
+    {
+      "id": "sifted",
+      "name": "Sifted",
+      "homepage": "https://sifted.eu/",
+      "type": "editorial",
+      "rss": "https://sifted.eu/feed"
+    },
+    {
+      "id": "strictlyvc",
+      "name": "StrictlyVC",
+      "homepage": "https://www.strictlyvc.com/",
+      "type": "vc_blog",
+      "rss": "https://www.strictlyvc.com/feed/"
+    },
+    {
+      "id": "pehub",
+      "name": "PE Hub",
+      "homepage": "https://www.pehub.com/",
+      "type": "editorial",
+      "rss": "https://www.pehub.com/feed/"
+    },
+    {
+      "id": "ycombinator_blog",
+      "name": "Y Combinator Blog",
+      "homepage": "https://blog.ycombinator.com/",
+      "type": "vc_blog",
+      "rss": "https://blog.ycombinator.com/rss/"
+    },
+    {
+      "id": "wsj_markets",
+      "name": "Wall Street Journal Markets",
+      "homepage": "https://www.wsj.com/news/markets",
+      "type": "editorial",
+      "rss": "https://feeds.a.dj.com/rss/RSSMarketsMain.xml"
+    },
+    {
+      "id": "ft_unhedged",
+      "name": "Financial Times Unhedged",
+      "homepage": "https://www.ft.com/unhedged",
+      "type": "editorial",
+      "rss": "https://www.ft.com/unhedged?format=rss"
+    },
+    {
+      "id": "sec_press_releases",
+      "name": "SEC Press Releases",
+      "homepage": "https://www.sec.gov/news/pressreleases",
+      "type": "primary",
+      "rss": "https://www.sec.gov/news/pressreleases.rss"
+    },
+    {
+      "id": "marketwatch_top",
+      "name": "MarketWatch Top Stories",
+      "homepage": "https://www.marketwatch.com/",
+      "type": "editorial",
+      "rss": "https://feeds.content.dowjones.io/public/rss/mw_topstories"
+    },
+    {
+      "id": "cnbc_business",
+      "name": "CNBC Business",
+      "homepage": "https://www.cnbc.com/business/",
+      "type": "editorial",
+      "rss": "https://www.cnbc.com/id/100003114/device/rss/rss.html"
+    },
+    {
+      "id": "cnbc_finance",
+      "name": "CNBC Finance",
+      "homepage": "https://www.cnbc.com/finance/",
+      "type": "editorial",
+      "rss": "https://www.cnbc.com/id/10000664/device/rss/rss.html"
+    },
+    {
+      "id": "forbes_business",
+      "name": "Forbes Business",
+      "homepage": "https://www.forbes.com/business/",
+      "type": "editorial",
+      "rss": "https://www.forbes.com/business/feed/"
+    },
+    {
+      "id": "tech_eu",
+      "name": "Tech.eu",
+      "homepage": "https://tech.eu/",
+      "type": "editorial",
+      "rss": "https://tech.eu/feed/"
+    },
+    {
+      "id": "private_equity_wire",
+      "name": "Private Equity Wire",
+      "homepage": "https://www.privateequitywire.co.uk/",
+      "type": "editorial",
+      "rss": "https://www.privateequitywire.co.uk/feed/"
+    },
+    {
+      "id": "cityam_markets",
+      "name": "City A.M. Markets",
+      "homepage": "https://www.cityam.com/category/markets/",
+      "type": "editorial",
+      "rss": "https://www.cityam.com/category/markets/feed/"
+    },
+    {
+      "id": "ft_markets",
+      "name": "Financial Times Markets",
+      "homepage": "https://www.ft.com/markets",
+      "type": "editorial",
+      "rss": "https://www.ft.com/markets?format=rss"
+    },
+    {
+      "id": "startupnews_fyi",
+      "name": "StartupNews.fyi",
+      "homepage": "https://startupnews.fyi/",
+      "type": "aggregator",
+      "rss": "https://startupnews.fyi/feed/"
+    }
+  ]
+}

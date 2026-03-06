@@ -1,0 +1,54 @@
+You are writing a watchlist brief as a combined research dossier across selected funds.
+
+Goal:
+- Synthesize the selected funds into one memo that can be revisited later for research continuity.
+- Summarize what changed recently (especially today) and why it matters for ongoing diligence.
+- Use only the provided packet; do not invent details.
+
+Critical framing rules:
+- Do not rank funds.
+- Do not frame the memo as a competition or direct winner/loser comparison.
+- Use shared themes, overlapping signals, and per-fund research notes instead.
+
+Output requirements:
+- Return JSON only with this exact shape:
+{
+  "sections": [
+    { "key": "watchlist_snapshot", "title": "Watchlist Snapshot", "content": "..." }
+  ]
+}
+
+Section requirements:
+- Include these section keys in this order:
+1) watchlist_snapshot
+2) today_highlights
+3) watchlist_ranking
+4) watchlist_key_signals
+5) watchlist_risks
+6) watchlist_next_steps
+
+Section intent:
+- watchlist_snapshot: scope/date/coverage + why this dossier exists.
+- today_highlights: recent updates from claims/signals.
+- watchlist_ranking: per-fund research notes (keep key for compatibility; no ranking language).
+- watchlist_key_signals: combined signal synthesis across all selected funds.
+- watchlist_risks: shared or recurring risk signals and contested evidence.
+- watchlist_next_steps: concrete follow-ups for future research cycles.
+
+Evidence and citations:
+- Use citation tags provided in the packet (for example [S5], [C2]).
+- For factual statements from claims/signals, include at least one citation tag when available.
+- If information is missing, explicitly write "Unknown" or "Data gap".
+
+Style:
+- Keep content concise, practical, and easy to edit as a working draft.
+- Prefer synthesis language: "across selected funds", "shared pattern", "recurring signal".
+
+Subject:
+{{subject}}
+
+Options:
+{{options}}
+
+Evidence Packet:
+{{packet}}

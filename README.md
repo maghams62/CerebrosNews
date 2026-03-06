@@ -27,6 +27,7 @@ Create `web/.env` with your OpenAI API key (copy-paste and replace the value):
 
 ```env
 OPENAI_API_KEY=sk-your-openai-api-key
+FUNDGRAPH_DATA_MODE=hybrid
 ```
 
 Install and run onboarding:
@@ -37,6 +38,15 @@ npm run dev:onboarding
 ```
 
 Open http://localhost:3000 in your browser.
+
+## CerebrosFund module
+
+CerebrosFund is available under `/cerebrosfund` in the web app.
+
+- Main docs: `web/README.md` → **CerebrosFund**
+- Trust layer docs: `web/docs/trust.md`
+- Feature flag: `FUNDGRAPH_DATA_MODE=mock|hybrid|real` (default: `hybrid`)
+- Quick demo: dashboard → extract claims from article → verify claim → tune profile → add signal
 
 ## AI tools used
 
@@ -60,3 +70,10 @@ Open http://localhost:3000 in your browser.
 
 Dataset and curation scripts are under `web/scripts/`.
 See `web/README.md` for more details.
+
+CerebrosFund synthetic dataset helpers:
+
+```bash
+cd web
+npm run fundgraph:generate
+```

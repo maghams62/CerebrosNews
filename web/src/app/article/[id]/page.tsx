@@ -3,11 +3,11 @@ import { notFound } from "next/navigation";
 import { JSDOM } from "jsdom";
 import { Readability } from "@mozilla/readability";
 import { FocusedViewerFrame } from "@/components/FocusedViewerFrame";
-import { readOfflineDataset } from "@/lib/dataset/offlineDataset";
+import { getCerebrosDemoMode, readOfflineDataset } from "@/lib/dataset/offlineDataset";
 import { readOfflineStoryGroups } from "@/lib/dataset/offlineStoryGroups";
 import { getFeed } from "@/lib/feed/getFeed";
 import { feedItemToStory } from "@/lib/feed/toStory";
-import { mockInsightBundle } from "@/lib/insights/mockInsightBundle";
+import { composeInsightBundle } from "@/lib/insights/composeInsightBundle";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -70,7 +70,10 @@ async function tryReadability(url: string): Promise<{ text: string | null; bylin
     });
     if (!res.ok) return { text: null, byline: null };
     const html = await res.text();
-    const dom = new JSDOM(html, { url });
+    const cleaned = html
+      .replace(/<style[\s\S]*?<\/style>/gi, "")
+      .replace(/<link[^>]*rel=["']?stylesheet["']?[^>]*>/gi, "");
+    const dom = new JSDOM(cleaned, { url });
     const parsed = new Readability(dom.window.document).parse();
     const text = parsed?.textContent?.replace(/\s+/g, " ").trim() ?? null;
     const trimmed = text && text.length ? text.slice(0, 20_000) : null;
@@ -85,6 +88,7 @@ async function tryReadability(url: string): Promise<{ text: string | null; bylin
 
 export default async function ArticlePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const demoMode = getCerebrosDemoMode();
 
   const offline = await readOfflineDataset();
   const storyGroups = await readOfflineStoryGroups();
@@ -174,6 +178,12 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
                     Prefer the original? <span className="text-slate-500">Open the source page in a new tab.</span>
                   </div>
                   <div className="flex items-center gap-2">
+                    <Link
+                      className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                      href={`/cerebrosfund/claims?fromArticle=${encodeURIComponent(id)}`}
+                    >
+                      Extract Claims
+                    </Link>
                     {offlineItem.canonicalUrl && offlineItem.canonicalUrl !== offlineItem.url ? (
                       <a
                         className="rounded-full bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-300"
@@ -202,12 +212,14 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
     );
   }
 
+  if (demoMode === "investing") return notFound();
+
   const feed = await getFeed();
   const item = feed.find((f) => f.id === id) ?? null;
   if (!item) return notFound();
 
   const story = feedItemToStory(item);
-  const insights = mockInsightBundle(item);
+  const insights = composeInsightBundle(story);
 
   return (
     <main>
@@ -248,14 +260,22 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
                   Prefer the original?{" "}
                   <span className="text-slate-500">Open the source page in a new tab.</span>
                 </div>
-                <a
-                  className="rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
-                  href={story.url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Open original source ↗
-                </a>
+                <div className="flex items-center gap-2">
+                  <Link
+                    className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                    href={`/cerebrosfund/claims?fromArticle=${encodeURIComponent(id)}`}
+                  >
+                    Extract Claims
+                  </Link>
+                  <a
+                    className="rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+                    href={story.url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open original source ↗
+                  </a>
+                </div>
               </div>
             </div>
           </div>
@@ -264,4 +284,3 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
     </main>
   );
 }
-

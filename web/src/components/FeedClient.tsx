@@ -2,13 +2,13 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { FeedItem } from "@/types/feed";
+import type { FeedItem, MarketMeta } from "@/types/feed";
 import { StoryWithInsights } from "@/types/storyWithInsights";
 import { FeedScroller } from "@/components/FeedScroller";
 import { FocusedViewerFrame } from "@/components/FocusedViewerFrame";
 import { ResetOnboardingButton } from "@/components/ResetOnboardingButton";
 import { feedItemToStory } from "@/lib/feed/toStory";
-import { mockInsightBundle } from "@/lib/insights/mockInsightBundle";
+import { composeInsightBundle } from "@/lib/insights/composeInsightBundle";
 import { loadTrustFields } from "@/lib/trust/loadTrustFields";
 import {
   APP_STATE_EVENT,
@@ -19,8 +19,58 @@ import {
 } from "@/lib/appState/storage";
 import { ConnectorId } from "@/types/appState";
 import { StoryGroup } from "@/types/storyGroup";
-import { canonicalizeTag } from "@/lib/tags/highSignal";
+import { canonicalizeTag, HIGH_SIGNAL_TAGS } from "@/lib/tags/highSignal";
+import { looksSportsText } from "@/lib/filters/sports";
 import { storyGroupsToStories } from "@/lib/storyGroups/toStories";
+
+type DemoMode = "off" | "investing";
+
+type SearchArticle = {
+  id: string;
+  title: string;
+  summary: string;
+  url: string | null;
+  sourceName: string;
+  publishedAt: string;
+  tags?: string[];
+  score: number;
+};
+
+type SearchMarket = {
+  id: string;
+  title: string;
+  sourceName: string;
+  publishedAt: string;
+  score: number;
+  market: MarketMeta | null;
+};
+
+type SearchLink = {
+  article: SearchArticle;
+  matches: SearchMarket[];
+};
+
+type SearchResponse = {
+  query: string;
+  counts: { articles: number; markets: number; links: number };
+  articles: SearchArticle[];
+  markets: SearchMarket[];
+  linked: SearchLink[];
+};
+
+const TECH_TAG_SET = new Set(HIGH_SIGNAL_TAGS);
+const MIN_GROUPS = 8;
+const TARGET_GROUPS = 12;
+const DEMO_INVESTING_TAG = "Demo:Investing";
+
+function isTechTags(tags: string[] | undefined | null): boolean {
+  if (!tags?.length) return false;
+  return tags
+    .map((t) => canonicalizeTag(t))
+    .filter(Boolean)
+    .some((t) => TECH_TAG_SET.has(t as (typeof HIGH_SIGNAL_TAGS)[number]));
+}
+
 
 function relativeTimeFromIso(iso: string): string {
   const d = new Date(iso);
@@ -147,6 +197,16 @@ function filterStoryGroupsBySources(groups: StoryGroup[], enabledMap: Map<string
       return { ...g, perspectives };
     })
     .filter(Boolean) as StoryGroup[];
+}
+
+function filterFeedItemsByDemoMode(items: FeedItem[], demoMode: DemoMode): FeedItem[] {
+  if (demoMode !== "investing") return items;
+  return items.filter((item) => Array.isArray(item.tags) && item.tags.includes(DEMO_INVESTING_TAG));
+}
+
+function filterStoryGroupsByDemoMode(groups: StoryGroup[], demoMode: DemoMode): StoryGroup[] {
+  if (demoMode !== "investing") return groups;
+  return groups.filter((group) => Array.isArray(group.topicTags) && group.topicTags.includes(DEMO_INVESTING_TAG));
 }
 
 function buildMatchers(topics: string[]) {
@@ -421,20 +481,50 @@ function mixInSocialItems(items: FeedItem[], interval: number) {
 export function FeedClient({
   initialFeedItems,
   initialStoryGroups,
+  demoMode = "off",
 }: {
   initialFeedItems?: FeedItem[] | null;
   initialStoryGroups?: StoryGroup[] | null;
+  demoMode?: DemoMode;
 }) {
   const [stories, setStories] = useState<StoryWithInsights[]>([]);
+  const [marketStories, setMarketStories] = useState<StoryWithInsights[]>([]);
   const [lastUpdatedIso, setLastUpdatedIso] = useState(new Date().toISOString());
+  const [marketLastUpdatedIso, setMarketLastUpdatedIso] = useState<string | null>(null);
   const [sourcesCount, setSourcesCount] = useState(0);
+  const [marketSourcesCount, setMarketSourcesCount] = useState(0);
   const [itemsCount, setItemsCount] = useState(0);
+  const [marketItemsCount, setMarketItemsCount] = useState(0);
   const [trustFieldIndex, setTrustFieldIndex] = useState<Record<string, { trust: import("@/lib/trust/schema").TrustFields }>>({});
   const syncingBlueskyRef = useRef(false);
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
+  const [feedView, setFeedView] = useState<"all" | "markets">("all");
 
-  const [liveItems, setLiveItems] = useState<FeedItem[]>(initialFeedItems ?? []);
-  const [liveGroups, setLiveGroups] = useState<StoryGroup[]>(initialStoryGroups ?? []);
+  const [liveItems, setLiveItems] = useState<FeedItem[]>(
+    filterFeedItemsByDemoMode(initialFeedItems ?? [], demoMode)
+  );
+  const [marketItems, setMarketItems] = useState<FeedItem[]>([]);
+  const [liveGroups, setLiveGroups] = useState<StoryGroup[]>(
+    filterStoryGroupsByDemoMode(initialStoryGroups ?? [], demoMode)
+  );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResponse | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const searchAbortRef = useRef<AbortController | null>(null);
+
+  const searchQueryTrimmed = useMemo(() => searchQuery.trim(), [searchQuery]);
+  const topLinked = useMemo(() => (searchResults?.linked ?? []).slice(0, 5), [searchResults]);
+  const topMarkets = useMemo(() => (searchResults?.markets ?? []).slice(0, 6), [searchResults]);
+  const topArticles = useMemo(() => (searchResults?.articles ?? []).slice(0, 6), [searchResults]);
+  const displayStories = useMemo(
+    () => (feedView === "markets" ? marketStories : stories),
+    [feedView, marketStories, stories]
+  );
+  const displayItemsCount = feedView === "markets" ? marketItemsCount : itemsCount;
+  const displaySourcesCount = feedView === "markets" ? marketSourcesCount : sourcesCount;
+  const displayLastUpdatedIso =
+    feedView === "markets" ? marketLastUpdatedIso ?? lastUpdatedIso : lastUpdatedIso;
 
   function storyGroupFromItem(item: FeedItem): StoryGroup {
     const resolvedUrl = item.url ?? item.postUrl ?? "";
@@ -575,13 +665,26 @@ export function FeedClient({
       if (liveGroups.length) {
         const preferredTopics = appState?.preferences?.topics ?? [];
         const blockedKeywords = appState?.preferences?.blockedKeywords ?? [];
-        const filteredGroups = filterStoryGroupsBySources(liveGroups, enabledSources);
-        const groups = curatedDemoGroups(filteredGroups, null, preferredTopics);
+        const filteredGroups = filterStoryGroupsBySources(
+          filterStoryGroupsByDemoMode(liveGroups, demoMode),
+          enabledSources
+        );
+        const techGroups = filteredGroups.filter(
+          (g) =>
+            isTechTags(g.topicTags ?? []) &&
+            !looksSportsText(`${g.canonicalTitle} ${g.analysis?.summary_markdown ?? ""}`)
+        );
+        const groups = curatedDemoGroups(techGroups, null, preferredTopics);
 
         // Mix in raw feed items as additional cards (no rebuild) to boost volume.
         const seenUrls = new Set<string>();
         groups.forEach((g) => g.perspectives.forEach((p) => seenUrls.add(p.url)));
-        const extraGroups = filterFeedItemsBySources(liveItems, enabledSources)
+        const extraGroups = filterFeedItemsBySources(
+          filterFeedItemsByDemoMode(liveItems, demoMode),
+          enabledSources
+        )
+          .filter((i) => isTechTags(i.tags ?? []))
+          .filter((i) => !looksSportsText(`${i.title} ${i.summary ?? ""} ${i.text ?? ""}`))
           .filter((i) => i.url && !seenUrls.has(i.url))
           .filter((i) => {
             const bullets = (i.bulletSummary ?? []).filter(Boolean);
@@ -609,15 +712,42 @@ export function FeedClient({
             },
           };
         });
+        const orderedMarkets = [
+          ...filterFeedItemsBySources(filterFeedItemsByDemoMode(marketItems, demoMode), enabledSources),
+        ]
+          .filter((m) => !looksSportsText(`${m.title} ${m.summary ?? ""}`))
+          .sort(
+          (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+        );
+        const marketStories = orderedMarkets.map((item) => {
+          const story = feedItemToStory(item);
+          const trustFields = trustFieldIndex[item.id]?.trust;
+          return {
+            story,
+            insights: composeInsightBundle(story, { trustFields }),
+          };
+        });
+
         setStories(nextStories);
+        setMarketStories(marketStories);
         setItemsCount(nextStories.length);
-        setLastUpdatedIso(orderedGroups[0]?.createdAt ?? new Date().toISOString());
-        const uniqueSources = new Set(orderedGroups.flatMap((g) => g.perspectives.map((p) => p.source)));
+        setMarketItemsCount(marketStories.length);
+        const marketLatest = orderedMarkets[0]?.publishedAt ?? null;
+        const groupLatest = orderedGroups[0]?.createdAt ?? null;
+        setLastUpdatedIso(latestIso(marketLatest, groupLatest) ?? new Date().toISOString());
+        setMarketLastUpdatedIso(marketLatest);
+        const uniqueSources = new Set([
+          ...orderedGroups.flatMap((g) => g.perspectives.map((p) => p.source)),
+          ...orderedMarkets.map((m) => m.sourceName),
+        ]);
         setSourcesCount(uniqueSources.size);
+        setMarketSourcesCount(new Set(orderedMarkets.map((m) => m.sourceName)).size);
         return;
       }
 
-      let items = filterFeedItemsBySources(liveItems, enabledSources);
+      let items = filterFeedItemsBySources(filterFeedItemsByDemoMode(liveItems, demoMode), enabledSources)
+        .filter((i) => isTechTags(i.tags ?? []))
+        .filter((i) => !looksSportsText(`${i.title} ${i.summary ?? ""} ${i.text ?? ""}`));
 
       if (appState) {
         items = mergeConnectorItems(
@@ -656,19 +786,37 @@ export function FeedClient({
       );
 
       const nextStories = orderedItems.map((item) => {
+        const story = feedItemToStory(item);
         const trustFields = trustFieldIndex[item.id]?.trust;
         return {
-        story: feedItemToStory(item),
-          insights: {
-            ...mockInsightBundle(item),
-            ...(trustFields ? { trustFields } : {}),
-          },
+          story,
+          insights: composeInsightBundle(story, { trustFields }),
         };
       });
       setStories(nextStories);
       setItemsCount(nextStories.length);
       setLastUpdatedIso(orderedItems[0]?.publishedAt ?? new Date().toISOString());
       setSourcesCount(new Set(orderedItems.map((i) => i.sourceName)).size);
+
+      const filteredMarkets = filterFeedItemsBySources(
+        filterFeedItemsByDemoMode(marketItems, demoMode),
+        enabledSources
+      ).filter((m) => !looksSportsText(`${m.title} ${m.summary ?? ""}`));
+      const orderedMarkets = [...filteredMarkets].sort(
+        (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+      );
+      const marketStories = orderedMarkets.map((item) => {
+        const story = feedItemToStory(item);
+        const trustFields = trustFieldIndex[item.id]?.trust;
+        return {
+          story,
+          insights: composeInsightBundle(story, { trustFields }),
+        };
+      });
+      setMarketStories(marketStories);
+      setMarketItemsCount(marketStories.length);
+      setMarketLastUpdatedIso(orderedMarkets[0]?.publishedAt ?? null);
+      setMarketSourcesCount(new Set(orderedMarkets.map((i) => i.sourceName)).size);
     };
 
     applyState();
@@ -682,7 +830,7 @@ export function FeedClient({
       window.removeEventListener(APP_STATE_EVENT, handler);
       window.removeEventListener("storage", storageHandler);
     };
-  }, [liveItems, liveGroups, trustFieldIndex]);
+  }, [liveItems, liveGroups, marketItems, trustFieldIndex, demoMode]);
 
   useEffect(() => {
     let active = true;
@@ -698,7 +846,7 @@ export function FeedClient({
               : Array.isArray(parsed?.groups)
                 ? (parsed.groups as StoryGroup[])
                 : [];
-          if (active && groups.length) setLiveGroups(groups);
+          if (active && groups.length) setLiveGroups(filterStoryGroupsByDemoMode(groups, demoMode));
         }
       } catch {
         // ignore
@@ -708,7 +856,17 @@ export function FeedClient({
         if (res.ok) {
           const parsed = await res.json();
           const items = Array.isArray(parsed?.articles) ? (parsed.articles as FeedItem[]) : [];
-          if (active && items.length) setLiveItems(items);
+          if (active && items.length) setLiveItems(filterFeedItemsByDemoMode(items, demoMode));
+        }
+      } catch {
+        // ignore
+      }
+      try {
+        const res = await fetch(`/api/markets?limit=400&ts=${Date.now()}`);
+        if (res.ok) {
+          const parsed = await res.json();
+          const items = Array.isArray(parsed?.markets) ? (parsed.markets as FeedItem[]) : [];
+          if (active && items.length) setMarketItems(items);
         }
       } catch {
         // ignore
@@ -718,31 +876,211 @@ export function FeedClient({
     return () => {
       active = false;
     };
-  }, [refreshToken]);
+  }, [refreshToken, demoMode]);
+
+  useEffect(() => {
+    if (searchQueryTrimmed.length < 2) {
+      setSearchResults(null);
+      setSearchError(null);
+      setSearchLoading(false);
+      return;
+    }
+
+    searchAbortRef.current?.abort();
+    const controller = new AbortController();
+    searchAbortRef.current = controller;
+    setSearchLoading(true);
+    setSearchError(null);
+
+    const handle = window.setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(searchQueryTrimmed)}`, {
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error("Search failed");
+        const payload = (await res.json()) as SearchResponse;
+        if (!controller.signal.aborted) {
+          setSearchResults(payload);
+          setSearchLoading(false);
+        }
+      } catch (err) {
+        if ((err as { name?: string } | null)?.name === "AbortError") return;
+        if (!controller.signal.aborted) {
+          setSearchError("Search failed");
+          setSearchLoading(false);
+        }
+      }
+    }, 320);
+
+    return () => {
+      window.clearTimeout(handle);
+      controller.abort();
+    };
+  }, [searchQueryTrimmed]);
 
   return (
     <FocusedViewerFrame>
-      <header className="border-b border-slate-200 bg-white px-6 py-3">
+      <header className="relative border-b border-slate-200 bg-white px-6 py-3">
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0 text-xs text-slate-500">
-            <span className="font-semibold text-slate-700">Today</span> • Updated {relativeTimeFromIso(lastUpdatedIso)} •{" "}
-            {sourcesCount} sources • {itemsCount} stories •{" "}
+            <span className="font-semibold text-slate-700">Today</span> • Updated{" "}
+            {relativeTimeFromIso(displayLastUpdatedIso)} • {displaySourcesCount} sources • {displayItemsCount} stories •{" "}
             <span className="font-semibold text-slate-700">↑ ↓</span> stories •{" "}
             <span className="font-semibold text-slate-700">← →</span> sources
           </div>
           <div className="flex items-center gap-2">
+            <div className="flex items-center rounded-full bg-slate-100 p-1 text-[11px] font-semibold text-slate-600">
+              <button
+                type="button"
+                onClick={() => setFeedView("all")}
+                className={`rounded-full px-3 py-1 transition ${
+                  feedView === "all" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                All
+              </button>
+              <button
+                type="button"
+                onClick={() => setFeedView("markets")}
+                className={`rounded-full px-3 py-1 transition ${
+                  feedView === "markets"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                Markets
+              </button>
+            </div>
+            <div className="relative">
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search news + markets"
+                className="h-8 w-72 rounded-full border border-slate-200 bg-slate-50 px-4 pr-8 text-xs text-slate-700 outline-none transition focus:border-indigo-300 focus:bg-white"
+              />
+              {searchQueryTrimmed.length ? (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full px-1.5 py-0.5 text-xs text-slate-400 hover:text-slate-600"
+                  aria-label="Clear search"
+                >
+                  ×
+                </button>
+              ) : null}
+            </div>
             <Link
               href="/profile"
               className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200"
             >
               Profile
             </Link>
+            <Link
+              href="/cerebrosfund"
+              className="rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+            >
+              CerebrosFund
+            </Link>
             <ResetOnboardingButton />
           </div>
         </div>
+        {searchQueryTrimmed.length >= 2 ? (
+          <div className="absolute left-6 right-6 top-full z-30 mt-3">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+              <div className="flex items-center justify-between text-xs text-slate-500">
+                <span>
+                  Results for <span className="font-semibold text-slate-700">&ldquo;{searchQueryTrimmed}&rdquo;</span>
+                </span>
+                {searchResults?.counts ? (
+                  <span>
+                    {searchResults.counts.links} links • {searchResults.counts.articles} articles •{" "}
+                    {searchResults.counts.markets} markets
+                  </span>
+                ) : null}
+              </div>
+              {searchLoading ? (
+                <div className="mt-3 text-sm text-slate-600">Searching…</div>
+              ) : searchError ? (
+                <div className="mt-3 text-sm text-rose-600">{searchError}</div>
+              ) : topLinked.length ? (
+                <div className="mt-3 grid gap-3">
+                  {topLinked.map((link) => (
+                    <div key={link.article.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-sm font-semibold text-slate-900">{link.article.title}</div>
+                        {link.article.url ? (
+                          <a
+                            href={link.article.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+                          >
+                            Open
+                          </a>
+                        ) : null}
+                      </div>
+                      <div className="mt-1 text-xs text-slate-500">
+                        {link.article.sourceName} • {relativeTimeFromIso(link.article.publishedAt)}
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {link.matches.map((match) => (
+                          <span
+                            key={match.id}
+                            className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200"
+                          >
+                            {match.market?.platform === "polymarket" ? "Polymarket" : "Kalshi"} •{" "}
+                            {match.market?.yes?.toFixed(0) ?? "—"}% Yes
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : topMarkets.length ? (
+                <div className="mt-3 grid gap-2">
+                  {topMarkets.map((market) => (
+                    <div key={market.id} className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                      <div className="text-sm font-semibold text-slate-900">{market.title}</div>
+                      <div className="text-xs font-semibold text-slate-500">
+                        {market.market?.platform === "polymarket" ? "Polymarket" : "Kalshi"} •{" "}
+                        {market.market?.yes?.toFixed(0) ?? "—"}% Yes
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : topArticles.length ? (
+                <div className="mt-3 grid gap-3">
+                  {topArticles.map((article) => (
+                    <div key={article.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-sm font-semibold text-slate-900">{article.title}</div>
+                        {article.url ? (
+                          <a
+                            href={article.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+                          >
+                            Open
+                          </a>
+                        ) : null}
+                      </div>
+                      <div className="mt-1 text-xs text-slate-500">
+                        {article.sourceName} • {relativeTimeFromIso(article.publishedAt)}
+                      </div>
+                      <div className="mt-2 text-xs text-slate-600">{article.summary}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-3 text-sm text-slate-600">No matches yet.</div>
+              )}
+            </div>
+          </div>
+        ) : null}
       </header>
       <div className="h-[calc(100%-48px)]">
-        <FeedScroller stories={stories} />
+        <FeedScroller stories={displayStories} />
       </div>
     </FocusedViewerFrame>
   );

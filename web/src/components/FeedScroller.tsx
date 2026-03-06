@@ -7,6 +7,7 @@ import { StoryWithInsights } from "@/types/storyWithInsights";
 import { useRouter } from "next/navigation";
 import { DesktopStoryCard } from "@/components/DesktopStoryCard";
 import { SocialStoryCard } from "@/components/SocialStoryCard";
+import { MarketStoryCard } from "@/components/MarketStoryCard";
 import { FeedDots } from "./FeedDots";
 import { SourcesPanel } from "./SourcesPanel";
 import { PerspectivesPanel } from "./PerspectivesPanel";
@@ -62,6 +63,7 @@ export function FeedScroller({ stories }: Props) {
 
   const currentPerspectiveCount = currentItem?.story.perspectives.length ?? 0;
   const isSocial = currentItem?.story.sourceType === "social";
+  const isMarket = Boolean(currentItem?.story.market);
   const anyOverlayOpen =
     sourcesOpen ||
     perspectivesOpen ||
@@ -437,7 +439,9 @@ export function FeedScroller({ stories }: Props) {
                     <AnimatePresence initial={false} custom={directionX}>
                       <motion.div
                         key={
-                          isSocial ? currentItem.story.id : currentItem.story.perspectives[perspectiveIndex]?.id ?? `p:${perspectiveIndex}`
+                          isSocial || isMarket
+                            ? currentItem.story.id
+                            : currentItem.story.perspectives[perspectiveIndex]?.id ?? `p:${perspectiveIndex}`
                         }
                         custom={directionX}
                         variants={perspectiveVariants}
@@ -446,7 +450,12 @@ export function FeedScroller({ stories }: Props) {
                         exit="exit"
                         className="absolute inset-0"
                       >
-                        {isSocial ? (
+                        {isMarket ? (
+                          <MarketStoryCard
+                            item={currentItem}
+                            onOpenMarket={() => openExternal(currentItem.story.market?.marketUrl ?? currentItem.story.url)}
+                          />
+                        ) : isSocial ? (
                           <SocialStoryCard
                             item={currentItem}
                             onOpenLink={() => openExternal(currentItem.story.url)}

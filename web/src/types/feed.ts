@@ -1,9 +1,34 @@
 export type SourceType = "editorial" | "community" | "social" | "primary";
+export type DataOrigin = "fetched" | "curated" | "derived";
 
 export type FeedItemMetrics = {
   likes?: number;
   reposts?: number;
   replies?: number;
+};
+
+export type MarketPlatform = "polymarket" | "kalshi";
+
+export type MarketComment = {
+  author: string;
+  text: string;
+  likes?: number;
+};
+
+export type MarketMeta = {
+  platform: MarketPlatform;
+  question: string;
+  yes: number;
+  no: number;
+  volume24h?: number;
+  liquidity?: number;
+  updatedAt?: string;
+  marketUrl?: string;
+  marketTicker?: string;
+  eventTicker?: string;
+  comments?: MarketComment[];
+  sentimentSummary?: string[];
+  demo?: boolean;
 };
 
 export interface FeedItem {
@@ -29,5 +54,6 @@ export interface FeedItem {
   sourceType: SourceType;
   tags: string[];
   metrics?: FeedItemMetrics;
+  market?: MarketMeta;
+  dataOrigin?: DataOrigin;
 }
-

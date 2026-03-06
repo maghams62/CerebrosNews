@@ -1,4 +1,4 @@
-import { JSDOM } from "jsdom";
+import { JSDOM, VirtualConsole } from "jsdom";
 import { Readability } from "@mozilla/readability";
 import { FetchOptions, fetchWithRetry } from "./fetch";
 import { canonicalizeUrl } from "./url";
@@ -9,6 +9,11 @@ type ExtractedArticle = {
   firstImageUrl: string | null;
   ogImageUrl: string | null;
 };
+
+const jsdomVirtualConsole = new VirtualConsole();
+jsdomVirtualConsole.on("jsdomError", () => {
+  // Ignore parse noise from site CSS that does not affect readable text extraction.
+});
 
 function stripHtml(html: string): string {
   const noScripts = html.replace(/<script[\s\S]*?<\/script>/gi, "");
@@ -42,7 +47,7 @@ function extractFirstImage(html: string): string | null {
 
 function readabilityExtract(html: string, url: string): { text: string | null; image: string | null } {
   try {
-    const dom = new JSDOM(html, { url });
+    const dom = new JSDOM(html, { url, virtualConsole: jsdomVirtualConsole });
     const reader = new Readability(dom.window.document);
     const parsed = reader.parse();
     if (!parsed) return { text: null, image: null };

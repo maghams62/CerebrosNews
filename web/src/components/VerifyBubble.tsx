@@ -33,6 +33,7 @@ export function VerifyBubble({
   articleSummary,
   articleUrl,
   source,
+  candidateUrls,
   className,
   buttonClassName,
   bubbleClassName,
@@ -47,6 +48,7 @@ export function VerifyBubble({
   articleSummary: string;
   articleUrl: string;
   source: string;
+  candidateUrls?: string[];
   className?: string;
   buttonClassName?: string;
   bubbleClassName?: string;
@@ -79,19 +81,23 @@ export function VerifyBubble({
           articleSummary,
           articleUrl,
           source,
+          candidateUrls,
         }),
       });
       if (!res.ok) {
         throw new Error(`Verify failed (${res.status})`);
       }
       const data = await res.json();
-      const rawClaims = Array.isArray(data?.claims) ? data.claims : [];
-      const normalized = rawClaims.slice(0, 3).map((c: any) => {
-        const citations = Array.isArray(c?.citations) ? c.citations.filter(Boolean).slice(0, 2) : [];
-        const status = normalizeStatus(c?.status);
+      const rawClaims = Array.isArray(data?.claims) ? (data.claims as unknown[]) : [];
+      const normalized = rawClaims.slice(0, 3).map((claim) => {
+        const c = claim && typeof claim === "object" ? (claim as Record<string, unknown>) : {};
+        const citations = Array.isArray(c.citations)
+          ? (c.citations as unknown[]).map(String).filter(Boolean).slice(0, 2)
+          : [];
+        const status = normalizeStatus(typeof c.status === "string" ? c.status : undefined);
         return {
-          claim: String(c?.claim ?? "").trim(),
-          status: status === "disputed" ? "disputed" : citations.length ? "verified" : status,
+          claim: String(c.claim ?? "").trim(),
+          status: citations.length ? (status === "disputed" ? "disputed" : "verified") : "unverified",
           citations,
         } as VerifyClaim;
       });
@@ -161,7 +167,7 @@ export function VerifyBubble({
       iconClass: "text-emerald-600 border-emerald-200 bg-emerald-50",
     },
     unverified: {
-      label: "Unverified",
+      label: "Unable to verify",
       icon: "•",
       chip: "bg-amber-50 text-amber-700",
       iconClass: "text-amber-700 border-amber-200 bg-amber-50",
@@ -288,7 +294,7 @@ export function VerifyBubble({
                         ))}
                       </div>
                       {c.status === "unverified" ? (
-                        <div className="text-xs text-slate-500">No reliable source found</div>
+                        <div className="text-xs text-slate-500">No accessible source found to confirm this.</div>
                       ) : null}
                     </div>
                   );

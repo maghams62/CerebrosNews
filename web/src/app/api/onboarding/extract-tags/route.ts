@@ -4,7 +4,7 @@ import { config as loadEnv } from "dotenv";
 
 export const runtime = "nodejs";
 
-function extractJson(text: string): any {
+function extractJson(text: string): unknown {
   try {
     return JSON.parse(text);
   } catch {
@@ -182,10 +182,10 @@ Return JSON only with shape: { "tags": string[] }.`;
     }
 
     const parsed = extractJson(content);
-    const tags = normalizeTags(parsed?.tags, { max: 6 });
+    const parsedObj = parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
+    const tags = normalizeTags(parsedObj.tags, { max: 6 });
     return NextResponse.json({ tags, mode: "openai" as const });
   } catch {
     return NextResponse.json({ tags: heuristicTags(text, allowedTags), mode: "heuristic" as const });
   }
 }
-

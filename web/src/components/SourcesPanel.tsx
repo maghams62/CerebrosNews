@@ -66,6 +66,11 @@ export function SourcesPanel({
 
         <div className="max-h-[55vh] overflow-y-auto p-4">
           <div className="space-y-3">
+            {!sources.length ? (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                No source links are available for this story yet.
+              </div>
+            ) : null}
             {sources.map((s) => (
               <div key={s.url} className="rounded-xl border border-slate-200 p-4">
                 <div className="flex items-start justify-between gap-3">
@@ -96,4 +101,3 @@ export function SourcesPanel({
     </div>
   );
 }
-

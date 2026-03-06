@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-function extractJson(text: string): any {
+function extractJson(text: string): unknown {
   try {
     return JSON.parse(text);
   } catch {
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
   const summary = typeof body?.summary === "string" ? body.summary : "";
   const publishedAt = typeof body?.publishedAt === "string" ? body.publishedAt : "";
   const tags = Array.isArray(body?.tags) ? body.tags.map(String) : [];
-  const sources = Array.isArray(body?.sources) ? body.sources : [];
+  const sources = Array.isArray(body?.sources) ? (body.sources as unknown[]) : [];
 
   if (!storyId || !title) {
     return NextResponse.json({ error: "invalid_request" }, { status: 400 });
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
 
   const nowIso = new Date().toISOString();
   const systemPrompt =
-    "You generate a compact trust dashboard for a news story. This is a rough demo estimate; be consistent and plausible. Output JSON only.";
+    "You generate a compact trust dashboard for a news story. Use only supplied inputs and output JSON only.";
 
   const userPrompt = `Return JSON with this exact shape:
 {
@@ -72,11 +72,12 @@ Story:
 
 Sources:
 ${sources
-  .map((s: any, idx: number) => {
-    const sTitle = typeof s?.title === "string" ? s.title : "n/a";
-    const sName = typeof s?.sourceName === "string" ? s.sourceName : "n/a";
-    const sUrl = typeof s?.url === "string" ? s.url : "n/a";
-    const sPublishedAt = typeof s?.publishedAt === "string" ? s.publishedAt : "n/a";
+  .map((source, idx) => {
+    const s = source && typeof source === "object" ? (source as Record<string, unknown>) : {};
+    const sTitle = typeof s.title === "string" ? s.title : "n/a";
+    const sName = typeof s.sourceName === "string" ? s.sourceName : "n/a";
+    const sUrl = typeof s.url === "string" ? s.url : "n/a";
+    const sPublishedAt = typeof s.publishedAt === "string" ? s.publishedAt : "n/a";
     return `${idx + 1}. ${sTitle} | ${sName} | ${sPublishedAt} | ${sUrl}`;
   })
   .join("\n")}

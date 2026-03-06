@@ -1,0 +1,20 @@
+You are resolving a conflict between two factual claims about the same entity.
+
+Rules:
+- Use only the provided claims and citations.
+- Do not choose a winner.
+- Return JSON only.
+- JSON shape: { "resolutionHint": "..." }
+- `resolutionHint` must be one short sentence describing what concrete evidence would resolve the conflict.
+
+Claim A:
+{{claimA}}
+
+Citation A:
+{{citationA}}
+
+Claim B:
+{{claimB}}
+
+Citation B:
+{{citationB}}

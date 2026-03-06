@@ -35,11 +35,20 @@ export function offlineItemToFeedItem(dataset: OfflineDatasetFile, item: Offline
     sourceName: sourceNameFor(dataset, item.sourceId),
     sourceType: coerceSourceType(item.sourceType),
     tags: item.tags ?? [],
+    dataOrigin: "curated",
   };
 }
 
 export function offlineDatasetToFeedItems(dataset: OfflineDatasetFile): FeedItem[] {
   const items = dataset.items ?? [];
-  return items.map((it) => offlineItemToFeedItem(dataset, it));
+  const hasRealUrl = (value?: string | null) => {
+    if (!value) return false;
+    try {
+      const u = new URL(value);
+      return u.protocol === "http:" || u.protocol === "https:";
+    } catch {
+      return false;
+    }
+  };
+  return items.filter((it) => hasRealUrl(it.url)).map((it) => offlineItemToFeedItem(dataset, it));
 }
-

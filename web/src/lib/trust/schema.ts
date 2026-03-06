@@ -61,6 +61,17 @@ function asStringArray(value: unknown, max = 6): string[] {
     .filter(Boolean)
     .slice(0, max);
 }
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object") return {};
+  return value as Record<string, unknown>;
+}
+
+function readKey(raw: Record<string, unknown>, key: string, alt?: string): unknown {
+  if (key in raw) return raw[key];
+  if (alt && alt in raw) return raw[alt];
+  return undefined;
+}
 function asLens(value: unknown): TrustFramingLens {
   const raw = asString(value).toLowerCase();
   const allowed: TrustFramingLens[] = [
@@ -79,8 +90,8 @@ function asLens(value: unknown): TrustFramingLens {
 
 function normalizeSoWhat(raw: Record<string, unknown>): TrustSoWhat {
   return {
-    near_term: asStringArray(raw.near_term ?? (raw as any).nearTerm, 6),
-    long_term: asStringArray(raw.long_term ?? (raw as any).longTerm, 6),
+    near_term: asStringArray(readKey(raw, "near_term", "nearTerm"), 6),
+    long_term: asStringArray(readKey(raw, "long_term", "longTerm"), 6),
   };
 }
 
@@ -88,16 +99,16 @@ function normalizeFraming(raw: Record<string, unknown>): TrustFraming {
   const lens = asLens(raw.lens);
   const emphasis = asStringArray(raw.emphasis, 6);
   const downplays = asStringArray(raw.downplays, 6);
-  const language_notes = asStringArray(raw.language_notes ?? (raw as any).languageNotes, 4);
+  const language_notes = asStringArray(readKey(raw, "language_notes", "languageNotes"), 4);
   return { lens, emphasis, downplays, language_notes };
 }
 
 export function normalizeTrustFields(value: unknown): TrustFields | null {
   if (!value || typeof value !== "object") return null;
   const raw = value as Record<string, unknown>;
-  const whats_missing = asStringArray(raw.whats_missing ?? (raw as any).whatsMissing, 6);
-  const so_what = normalizeSoWhat((raw.so_what ?? (raw as any).soWhat ?? {}) as Record<string, unknown>);
-  const framing = normalizeFraming((raw.framing ?? {}) as Record<string, unknown>);
+  const whats_missing = asStringArray(readKey(raw, "whats_missing", "whatsMissing"), 6);
+  const so_what = normalizeSoWhat(asRecord(readKey(raw, "so_what", "soWhat")));
+  const framing = normalizeFraming(asRecord(raw.framing));
 
   if (!whats_missing.length && !so_what.near_term.length && !so_what.long_term.length && !framing.emphasis.length) {
     return null;

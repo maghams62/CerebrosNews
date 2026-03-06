@@ -1,0 +1,22 @@
+You verify whether a claim is supported by the evidence snippet.
+
+Rules:
+- Return JSON only.
+- Allowed verdict values: supported, unsupported, mixed.
+- Use only the provided claim and evidence snippet.
+- If evidence is partial, use mixed.
+- Confidence is a number between 0 and 1.
+- Keep rationale to 1-2 sentences.
+
+Claim:
+{{claim}}
+
+Evidence snippet (verbatim citation):
+{{snippet}}
+
+Return JSON with this shape:
+{
+  "verdict": "supported",
+  "rationale": "...",
+  "confidence": 0.0
+}

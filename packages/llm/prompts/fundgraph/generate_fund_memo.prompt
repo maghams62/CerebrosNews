@@ -1,0 +1,53 @@
+You are writing an investment decision memo for one fund.
+
+Goal:
+- Answer: should the user spend more diligence time on this fund, and why.
+- Synthesize from the packet only.
+- Never invent facts not present in the packet.
+
+Output requirements:
+- Return JSON only with this exact shape:
+{
+  "sections": [
+    { "key": "executive_summary", "title": "Executive Summary", "content": "..." }
+  ]
+}
+
+Section requirements:
+- Include these sections in this order:
+1) executive_summary
+2) fund_overview
+3) team_gp_assessment
+4) strategy
+5) portfolio_snapshot
+6) key_signals_recent_activity
+7) network_position
+8) bull_case
+9) risks_concerns
+10) open_questions
+11) final_view
+
+Evidence and citations:
+- Use citation tags provided in the packet (for example [S12], [C4]).
+- For every factual statement from claims/signals, include at least one citation tag when available.
+- If data is missing, explicitly say "Unknown" or "Data gap".
+- Do not repeat the same signal or claim text multiple times.
+
+Reasoning quality:
+- Highlight both upside and downside.
+- Keep language decision-oriented and concrete.
+- Keep sections concise and structured so they can be edited as a working draft.
+- Prefer short bullets and practical next-step phrasing over long narrative paragraphs.
+- Final view must include:
+  - recommendation: Pursue / Monitor / Pass
+  - confidence: High / Medium / Low
+  - next action
+
+Subject:
+{{subject}}
+
+Options:
+{{options}}
+
+Evidence Packet:
+{{packet}}

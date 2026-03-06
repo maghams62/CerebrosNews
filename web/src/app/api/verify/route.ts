@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 
 type VerifyStatus = "verified" | "unverified" | "disputed";
 
-function extractJson(text: string): any {
+function extractJson(text: string): unknown {
   try {
     return JSON.parse(text);
   } catch {
@@ -37,6 +37,31 @@ function normalizeUrl(input: string): string | null {
   }
 }
 
+const PLACEHOLDER_DOMAINS = new Set([
+  "example.com",
+  "example.org",
+  "example.net",
+  "example.edu",
+  "example.test",
+  "example.invalid",
+  "example.local",
+  "localhost",
+  "127.0.0.1",
+  "0.0.0.0",
+]);
+
+function isDisallowedDomain(input: string): boolean {
+  const domain = domainFromUrl(input) ?? "";
+  if (!domain) return true;
+  if (PLACEHOLDER_DOMAINS.has(domain)) return true;
+  for (const placeholder of PLACEHOLDER_DOMAINS) {
+    if (placeholder.includes(".")) {
+      if (domain.endsWith(`.${placeholder}`)) return true;
+    }
+  }
+  return domain === "duckduckgo.com" || domain === "r.jina.ai";
+}
+
 function domainFromUrl(input: string): string | null {
   try {
     const url = new URL(input);
@@ -59,6 +84,20 @@ function uniqueByDomain(urls: string[]): string[] {
   return out;
 }
 
+function limitByDomain(urls: string[], maxPerDomain = 2): string[] {
+  const counts = new Map<string, number>();
+  const out: string[] = [];
+  for (const url of urls) {
+    const domain = domainFromUrl(url);
+    if (!domain) continue;
+    const count = counts.get(domain) ?? 0;
+    if (count >= maxPerDomain) continue;
+    counts.set(domain, count + 1);
+    out.push(url);
+  }
+  return out;
+}
+
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const id = setTimeout(() => reject(new Error("timeout")), timeoutMs);
@@ -74,73 +113,172 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   });
 }
 
-async function ddgSearch(query: string, limit = 3, timeoutMs = 1200): Promise<string[]> {
-  const params = new URLSearchParams({ q: query, kl: "us-en" });
-  const fetchHtml = async (url: string) => {
+function sanitizeQuery(query: string): string {
+  const cleaned = query.replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim();
+  if (!cleaned) return "";
+  return cleaned.replace(/["“”]/g, "");
+}
+
+function isHtmlContentType(contentType: string): boolean {
+  const lowered = contentType.toLowerCase();
+  return lowered.includes("text/html") || lowered.includes("application/xhtml+xml");
+}
+
+function isTextLikeContentType(contentType: string): boolean {
+  const lowered = contentType.toLowerCase();
+  return (
+    isHtmlContentType(lowered) ||
+    lowered.startsWith("text/") ||
+    lowered.includes("xml") ||
+    lowered.includes("+xml")
+  );
+}
+
+function looksLikeHtml(text: string): boolean {
+  return /<\s*(html|head|body|article|main)[\s>]|<!doctype/i.test(text);
+}
+
+function hasAttachmentDisposition(contentDisposition: string): boolean {
+  return contentDisposition.toLowerCase().includes("attachment");
+}
+
+async function fetchDdgHtml(query: string, timeoutMs: number): Promise<string> {
+  const params = new URLSearchParams({ q: sanitizeQuery(query), kl: "us-en", ia: "web" });
+  const headers = {
+    "user-agent":
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_5_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+    "accept-language": "en-US,en;q=0.9",
+  };
+  const fetchHtml = async (url: string, withHeaders: boolean) => {
     try {
-      const res = await withTimeout(fetch(url, { method: "GET" }), timeoutMs);
+      const res = await withTimeout(
+        fetch(url, { method: "GET", ...(withHeaders ? { headers } : {}) }),
+        timeoutMs
+      );
       if (!res.ok) return "";
+      if (res.status === 202) return "";
       return res.text();
     } catch {
       return "";
     }
   };
-  const finalHtml = await fetchHtml(`https://r.jina.ai/http://duckduckgo.com/html/?${params.toString()}`);
+  const looksLikeResults = (html: string) =>
+    html.includes("/l/?") || html.includes("result__a") || html.includes("result-title-a");
+
+  const direct = await fetchHtml(`https://duckduckgo.com/html/?${params.toString()}`, true);
+  if (direct && looksLikeResults(direct)) return direct;
+  const fallback = await fetchHtml(`https://r.jina.ai/http://duckduckgo.com/html/?${params.toString()}`, false);
+  if (fallback && looksLikeResults(fallback)) return fallback;
+  return fallback || direct || "";
+}
+
+async function ddgSearch(query: string, limit = 3, timeoutMs = 1200): Promise<string[]> {
+  const cleanedQuery = sanitizeQuery(query);
+  if (!cleanedQuery) return [];
+  const finalHtml = await fetchDdgHtml(cleanedQuery, timeoutMs);
   if (!finalHtml) return [];
+  const extractUddg = (href: string): string | null => {
+    const match = href.match(/uddg=([^&\s)\]]+)/);
+    if (!match) return null;
+    try {
+      return decodeURIComponent(match[1]);
+    } catch {
+      return match[1];
+    }
+  };
   const decodeDdg = (href: string): string | null => {
     if (href.startsWith("/l/?")) {
-      const qs = href.split("?")[1] ?? "";
-      const uddg = new URLSearchParams(qs).get("uddg");
-      if (!uddg) return null;
-      try {
-        return decodeURIComponent(uddg);
-      } catch {
-        return uddg;
-      }
+      return extractUddg(href);
+    }
+    if (href.startsWith("http://duckduckgo.com/l/?") || href.startsWith("https://duckduckgo.com/l/?")) {
+      return extractUddg(href);
     }
     return href;
   };
   const extractFromText = (text: string) => {
-    const urls = Array.from(text.matchAll(/https?:\/\/[^\s)\]]+/g)).map((m) => m[0]);
-    return urls
-      .filter((u) => !u.includes("duckduckgo.com/html"))
-      .filter((u) => !u.includes("external-content.duckduckgo.com"))
+    const uddgLinks = Array.from(
+      text.matchAll(/(?:https?:\/\/duckduckgo\.com)?\/l\/\?[^"'\s<>\)\]]+/g)
+    ).map((m) => m[0]);
+    return uddgLinks
       .map((u) => {
-        const decoded = decodeDdg(u);
-        return decoded ?? u;
-      });
+        const decoded = decodeDdg(u.startsWith("http") ? u : `https://duckduckgo.com${u}`);
+        return decoded ?? "";
+      })
+      .filter(Boolean);
   };
 
-  const urls = extractFromText(finalHtml);
-  if (urls.length) return Array.from(new Set(urls)).slice(0, limit);
-
   const $ = cheerio.load(finalHtml);
-  const out: string[] = [];
-  $(".results .result__a").each((_, el) => {
+  const domUrls: string[] = [];
+  $(".results .result__a, .result__a, a[data-testid='result-title-a']").each((_, el) => {
     const href = $(el).attr("href");
     if (!href) return;
     const decoded = decodeDdg(href);
     if (!decoded) return;
-    out.push(decoded);
+    domUrls.push(decoded);
   });
-  return out.slice(0, limit);
+  const textUrls = extractFromText(finalHtml);
+  const combined = Array.from(new Set([...domUrls, ...textUrls]));
+  return combined.slice(0, limit);
 }
 
-async function validateCitation(url: string, disallowUrl: string | null): Promise<string | null> {
+function looksLikeSoft404(text: string): boolean {
+  const sample = text.toLowerCase();
+  return (
+    sample.includes("page not found") ||
+    sample.includes("404 not found") ||
+    sample.includes("error 404") ||
+    sample.includes("not found on this server")
+  );
+}
+
+async function validateCitation(url: string, disallowUrl: string | null, timeoutMs = 1400): Promise<string | null> {
   const normalized = normalizeUrl(url);
   if (!normalized) return null;
   if (disallowUrl && normalized === disallowUrl) return null;
+  if (isDisallowedDomain(normalized)) return null;
   try {
-    const res = await fetch(normalized, { method: "HEAD" });
-    if (res.ok) return normalized;
-    if ([401, 403, 405].includes(res.status)) return normalized;
-  } catch {
-    // fallback to GET below
-  }
-  try {
-    const res = await fetch(normalized, { method: "GET" });
-    if (res.ok) return normalized;
-    if ([401, 403, 405].includes(res.status)) return normalized;
+    const res = await withTimeout(
+      fetch(normalized, {
+        method: "GET",
+        headers: {
+          "user-agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_5_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+          "accept-language": "en-US,en;q=0.9",
+        },
+      }),
+      timeoutMs
+    );
+    if (!res.ok) {
+      if ([401, 403, 405, 429, 503].includes(res.status)) {
+        const contentDisposition = res.headers.get("content-disposition") ?? "";
+        if (hasAttachmentDisposition(contentDisposition)) return null;
+        return normalized;
+      }
+      return null;
+    }
+    const contentType = res.headers.get("content-type") ?? "";
+    const contentDisposition = res.headers.get("content-disposition") ?? "";
+    if (hasAttachmentDisposition(contentDisposition)) return null;
+    let bodyText = "";
+    if (!contentType) {
+      try {
+        bodyText = await res.text();
+        const looksHtml = looksLikeHtml(bodyText);
+        if (!looksHtml && bodyText.length < 120) return null;
+      } catch {
+        return null;
+      }
+    } else if (isTextLikeContentType(contentType)) {
+      try {
+        bodyText = await res.text();
+      } catch {
+        return null;
+      }
+    } else {
+      return null;
+    }
+    if (bodyText && looksLikeSoft404(bodyText)) return null;
+    return normalized;
   } catch {
     // ignore
   }
@@ -151,7 +289,164 @@ function softCitations(urls: string[], disallowUrl: string | null): string[] {
   return urls
     .map((u) => normalizeUrl(u))
     .filter((u): u is string => Boolean(u))
-    .filter((u) => !disallowUrl || u !== disallowUrl);
+    .filter((u) => !disallowUrl || u !== disallowUrl)
+    .filter((u) => !isDisallowedDomain(u));
+}
+
+async function filterValidCitations(
+  urls: string[],
+  disallowUrl: string | null,
+  limit = 2,
+  timeoutMs = 1400
+): Promise<string[]> {
+  const candidates = limitByDomain(urls, 2);
+  if (!candidates.length) return [];
+  const checked = await Promise.all(candidates.map((u) => validateCitation(u, disallowUrl, timeoutMs)));
+  return uniqueByDomain(checked.filter((u): u is string => Boolean(u))).slice(0, limit);
+}
+
+function prioritizeExternal(urls: string[], articleDomain: string | null): string[] {
+  if (!articleDomain) return urls;
+  const external: string[] = [];
+  const same: string[] = [];
+  for (const url of urls) {
+    const domain = domainFromUrl(url);
+    if (domain && domain === articleDomain) same.push(url);
+    else external.push(url);
+  }
+  return [...external, ...same];
+}
+
+function normalizeQueryText(text: string): string {
+  return text
+    .replace(/[^\w\s-]/g, " ")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function expandAbbreviations(text: string): string {
+  const replacements: Array<[RegExp, string]> = [
+    [/\bAG\b/gi, "Attorney General"],
+    [/\bDA\b/gi, "District Attorney"],
+    [/\bDOJ\b/gi, "Justice Department"],
+    [/\bFTC\b/gi, "Federal Trade Commission"],
+    [/\bSEC\b/gi, "Securities and Exchange Commission"],
+    [/\bEU\b/gi, "European Union"],
+    [/\bUK\b/gi, "United Kingdom"],
+    [/\bU\.S\.\b/gi, "United States"],
+    [/\bUS\b/gi, "United States"],
+  ];
+  let out = text;
+  for (const [regex, value] of replacements) {
+    out = out.replace(regex, value);
+  }
+  return out;
+}
+
+function keywordQuery(text: string, maxTerms = 6): string {
+  const stop = new Set([
+    "the",
+    "a",
+    "an",
+    "and",
+    "or",
+    "to",
+    "of",
+    "in",
+    "on",
+    "for",
+    "with",
+    "by",
+    "as",
+    "is",
+    "are",
+    "was",
+    "were",
+    "be",
+    "been",
+    "being",
+    "this",
+    "that",
+    "these",
+    "those",
+    "it",
+    "its",
+    "their",
+    "his",
+    "her",
+    "they",
+    "he",
+    "she",
+    "we",
+    "you",
+    "your",
+    "our",
+    "new",
+    "about",
+    "after",
+    "before",
+    "over",
+    "under",
+    "into",
+    "than",
+    "then",
+    "will",
+    "would",
+    "could",
+    "should",
+    "may",
+    "might",
+  ]);
+  const parts = normalizeQueryText(text)
+    .split(" ")
+    .map((p) => p.trim())
+    .filter((p) => p.length > 2 && !stop.has(p.toLowerCase()));
+  return parts.slice(0, maxTerms).join(" ");
+}
+
+function cleanSourceName(source: string): string {
+  return source.replace(/\s*\(.*?\)\s*/g, "").trim();
+}
+
+function buildSearchQueries(input: {
+  claim: string;
+  title: string;
+  summary: string;
+  source: string;
+  domain?: string | null;
+}): string[] {
+  const queries: string[] = [];
+  const seen = new Set<string>();
+  const add = (q: string) => {
+    const cleaned = sanitizeQuery(q);
+    if (!cleaned || cleaned.length < 4) return;
+    if (seen.has(cleaned)) return;
+    seen.add(cleaned);
+    queries.push(cleaned);
+  };
+  const source = cleanSourceName(input.source || "");
+  const claim = expandAbbreviations(input.claim || "");
+  const title = expandAbbreviations(input.title || "");
+  const summary = expandAbbreviations(input.summary || "");
+  if (claim) {
+    add(`${claim} ${source}`.trim());
+    add(claim);
+    add(claim.split(" ").slice(0, 8).join(" "));
+  }
+  if (title) {
+    add(`${title} ${source}`.trim());
+    add(title);
+  }
+  if (summary) {
+    add(keywordQuery(summary, 8));
+  }
+  add(keywordQuery(`${claim} ${title}`));
+  if (input.domain && (claim || title)) {
+    const domainQuery = keywordQuery(`${claim} ${title}`, 8);
+    add(domainQuery ? `site:${input.domain} ${domainQuery}` : `site:${input.domain} ${title || claim}`.trim());
+  }
+  return queries.slice(0, 6);
 }
 
 export async function POST(req: Request) {
@@ -161,6 +456,11 @@ export async function POST(req: Request) {
   const articleSummary = typeof body?.articleSummary === "string" ? body.articleSummary : "";
   const articleUrl = typeof body?.articleUrl === "string" ? body.articleUrl : "";
   const source = typeof body?.source === "string" ? body.source : "";
+  const candidateUrls = Array.isArray(body?.candidateUrls)
+    ? (body.candidateUrls as unknown[])
+        .map((u) => (typeof u === "string" ? u.trim() : ""))
+        .filter(Boolean)
+    : [];
 
   if (!articleId || (!articleTitle && !articleSummary)) {
     return NextResponse.json({ error: "invalid_request" }, { status: 400 });
@@ -226,55 +526,87 @@ ${articleSummary}`;
     }
 
     const parsed = extractJson(content);
-    const rawClaims = Array.isArray(parsed?.claims) ? parsed.claims : [];
+    const parsedObj = parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
+    const rawClaims = Array.isArray(parsedObj.claims) ? parsedObj.claims : [];
     const articleDomain = domainFromUrl(articleUrl ?? "");
     const disallowUrl = normalizeUrl(articleUrl ?? "");
     const startedAt = Date.now();
-    const budgetMs = 7000;
-    const perSearchMs = 1600;
+    const budgetMs = 10000 + rawClaims.length * 700;
+    const perSearchMs = 2200;
+    const perValidateMs = 2000;
 
     const remainingForSearch = Math.max(300, budgetMs - (Date.now() - startedAt));
-    const titleQuery = articleTitle ? `"${articleTitle}"` : "";
-    const fallbackUrls =
-      titleQuery && remainingForSearch > 600
-        ? await ddgSearch(
-            `${titleQuery} ${source}`.trim(),
-            4,
-            Math.min(perSearchMs, remainingForSearch)
-          )
-        : [];
-    const fallbackCitations = uniqueByDomain(
-      softCitations(fallbackUrls, disallowUrl).filter((u) => domainFromUrl(u) !== articleDomain)
-    ).slice(0, 2);
+    const candidateCandidates = uniqueByDomain(
+      prioritizeExternal(softCitations(candidateUrls, disallowUrl), articleDomain)
+    ).slice(0, 8);
+    const candidateCitations = await filterValidCitations(candidateCandidates, disallowUrl, 2, perValidateMs);
+
+    const fallbackQueries = buildSearchQueries({
+      claim: "",
+      title: articleTitle,
+      summary: articleSummary,
+      source,
+      domain: articleDomain,
+    });
+    const fallbackUrls: string[] = [];
+    for (const q of fallbackQueries) {
+      if (!q || remainingForSearch <= 600) break;
+      const urls = await ddgSearch(q, 10, Math.min(perSearchMs, remainingForSearch));
+      fallbackUrls.push(...urls);
+      if (fallbackUrls.length >= 14) break;
+    }
+    const fallbackCandidates = uniqueByDomain(
+      prioritizeExternal(softCitations(fallbackUrls, disallowUrl), articleDomain)
+    ).slice(0, 8);
+    const fallbackCitations = await filterValidCitations(fallbackCandidates, disallowUrl, 2, perValidateMs);
+    const globalFallbackCitations = uniqueByDomain([
+      ...candidateCitations,
+      ...fallbackCitations,
+    ]).slice(0, 2);
 
     const claims = await Promise.all(
-      rawClaims.slice(0, 3).map(async (c: any) => {
+      rawClaims.slice(0, 3).map(async (claim) => {
+        const c = claim && typeof claim === "object" ? (claim as Record<string, unknown>) : {};
         const elapsed = Date.now() - startedAt;
-        const remaining = Math.max(300, budgetMs - elapsed);
-        const query = String(c?.claim ?? "").trim();
-        const modelStatus = normalizeStatus(c?.status);
-        const modelCitations = uniqueByDomain(
-          softCitations(Array.isArray(c?.citations) ? c.citations : [], disallowUrl).filter(
-            (u) => domainFromUrl(u) !== articleDomain
+        const query = String(c.claim ?? "").trim();
+        const modelStatus = normalizeStatus(c.status);
+        const modelCandidates = uniqueByDomain(
+          prioritizeExternal(
+            softCitations(Array.isArray(c.citations) ? (c.citations as string[]) : [], disallowUrl),
+            articleDomain
           )
-        ).slice(0, 2);
+        ).slice(0, 3);
+        const modelCitations = await filterValidCitations(modelCandidates, disallowUrl, 2, perValidateMs);
 
         let citations = modelCitations;
-        if (query && citations.length === 0 && remaining > 600) {
-          const searchUrls = await ddgSearch(
-            `${query} ${articleTitle || source}`.trim(),
-            3,
-            Math.min(perSearchMs, remaining)
-          );
-          citations = uniqueByDomain(
-            softCitations(searchUrls, disallowUrl).filter((u) => domainFromUrl(u) !== articleDomain)
-          ).slice(0, 2);
+        if (citations.length === 0 && candidateCitations.length) {
+          citations = candidateCitations.slice(0, 2);
         }
-        if (citations.length === 0 && fallbackCitations.length) {
-          citations = fallbackCitations.slice(0, 2);
+        if (query && citations.length === 0) {
+          const queries = buildSearchQueries({
+            claim: query,
+            title: articleTitle,
+            summary: articleSummary,
+            source,
+            domain: articleDomain,
+          });
+          for (const q of queries) {
+            const loopElapsed = Date.now() - startedAt;
+            const loopRemaining = Math.max(300, budgetMs - loopElapsed);
+            if (loopRemaining <= 600) break;
+            const searchUrls = await ddgSearch(q, 10, Math.min(perSearchMs, loopRemaining));
+            const searchCandidates = uniqueByDomain(
+              prioritizeExternal(softCitations(searchUrls, disallowUrl), articleDomain)
+            ).slice(0, 8);
+            citations = await filterValidCitations(searchCandidates, disallowUrl, 2, perValidateMs);
+            if (citations.length) break;
+          }
+        }
+        if (citations.length === 0 && globalFallbackCitations.length) {
+          citations = globalFallbackCitations.slice(0, 2);
         }
 
-        const status = modelStatus === "disputed" ? "disputed" : citations.length ? "verified" : modelStatus;
+        const status = citations.length ? (modelStatus === "disputed" ? "disputed" : "verified") : "unverified";
         return {
           claim: query,
           status,

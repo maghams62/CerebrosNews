@@ -1,0 +1,74 @@
+{
+  "generatedAt": "2026-03-06T11:52:56.127Z",
+  "verificationSources": {
+    "primary": "Wikidata entity data and Wikipedia-backed entity records",
+    "secondary": "Manual overrides for missing fields"
+  },
+  "before": {
+    "fundCount": 66,
+    "duplicateNameRows": 26,
+    "placeholderGps": 19,
+    "missingOfficialUrl": 66,
+    "invalidHeadquarters": 0,
+    "invalidVintageYear": 0,
+    "nonPositiveAumRows": 0,
+    "selfCoinvestorRows": 3
+  },
+  "after": {
+    "fundCount": 40,
+    "duplicateNameRows": 0,
+    "placeholderGps": 0,
+    "missingOfficialUrl": 0,
+    "invalidHeadquarters": 0,
+    "invalidVintageYear": 0,
+    "nonPositiveAumRows": 39,
+    "selfCoinvestorRows": 0
+  },
+  "remapStats": {
+    "duplicateFundRowsRemoved": 26,
+    "fundIdAliases": 26
+  },
+  "unresolved": {
+    "aumUnknownFundNames": [
+      "Andreessen Horowitz",
+      "Accel",
+      "Benchmark",
+      "Bessemer Venture Partners",
+      "Lightspeed Venture Partners",
+      "General Catalyst",
+      "Greylock Partners",
+      "Index Ventures",
+      "Khosla Ventures",
+      "Founders Fund",
+      "First Round Capital",
+      "Union Square Ventures",
+      "Insight Partners",
+      "Coatue",
+      "Tiger Global",
+      "NEA",
+      "GV",
+      "Kleiner Perkins",
+      "Ribbit Capital",
+      "a16z Crypto",
+      "IVP",
+      "Redpoint Ventures",
+      "Craft Ventures",
+      "Sapphire Ventures",
+      "Madrona",
+      "Menlo Ventures",
+      "Battery Ventures",
+      "Felicis",
+      "Initialized Capital",
+      "Y Combinator",
+      "NFX",
+      "Threshold Ventures",
+      "Lux Capital",
+      "DCVC",
+      "TCV",
+      "Altimeter Capital",
+      "Spark Capital",
+      "Scale Venture Partners",
+      "GIC"
+    ]
+  }
+}

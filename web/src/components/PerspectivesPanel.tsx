@@ -48,6 +48,11 @@ export function PerspectivesPanel({
           <section className="space-y-3">
             <div className="text-sm font-semibold text-slate-900">Narrative diff</div>
             <div className="space-y-3">
+              {!insights.perspectives.lenses.length ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                  No narrative comparison data available yet.
+                </div>
+              ) : null}
               {insights.perspectives.lenses.map((lens) => (
                 <div key={lens.id} className="rounded-xl border border-slate-200 p-4">
                   <div className="flex items-start justify-between gap-3">
@@ -72,6 +77,11 @@ export function PerspectivesPanel({
           <section className="space-y-3">
             <div className="text-sm font-semibold text-slate-900">Opposing views</div>
             <div className="space-y-3">
+              {!insights.perspectives.opposingArticles.length ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                  No opposing coverage links are available yet.
+                </div>
+              ) : null}
               {insights.perspectives.opposingArticles.map((a) => (
                 <div key={a.id} className="rounded-xl border border-slate-200 p-4">
                   <div className="flex items-start justify-between gap-3">
@@ -105,4 +115,3 @@ export function PerspectivesPanel({
     </div>
   );
 }
-

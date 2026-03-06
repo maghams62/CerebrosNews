@@ -1,5 +1,5 @@
 import type { StoryPerspective } from "@/types/storyPerspective";
-import type { FeedItemMetrics, SourceType } from "@/types/feed";
+import type { FeedItemMetrics, MarketMeta, SourceType } from "@/types/feed";
 
 export interface Story {
   id: string;
@@ -14,6 +14,8 @@ export interface Story {
   authorHandle?: string;
   tags?: string[];
   metrics?: FeedItemMetrics;
+  market?: MarketMeta;
+  dataOrigin?: import("@/types/feed").DataOrigin;
   sources?: string[];
   publishedAt: string;
   fullText: string;

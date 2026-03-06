@@ -20,8 +20,8 @@ import {
 } from "@/lib/appState/storage";
 import { isOnboardingEnabled } from "@/lib/appState/onboardingFlag";
 import { ConnectorId, SourceEntry } from "@/types/appState";
+import type { FeedItem } from "@/types/feed";
 import { DEFAULT_PREFERENCES } from "@/types/preferences";
-import { mockFetchConnector } from "@/lib/connectors/mockFetch";
 
 function titleCase(input: string) {
   return input
@@ -102,22 +102,32 @@ function mergeSources(existing: SourceEntry[], datasetEntries: SourceEntry[]): S
   return [...merged, ...custom];
 }
 
+function emptyConnectorCounts(id: ConnectorId): Record<string, number> {
+  if (id === "github") return { repos: 0, releases: 0 };
+  if (id === "bluesky") return { posts: 0 };
+  return { stories: 0 };
+}
+
 export default function ProfilePage() {
   const router = useRouter();
-  const [appState, setAppState] = useState(DEFAULT_APP_STATE);
-  const [loaded, setLoaded] = useState(false);
+  const [bootstrap] = useState(() => {
+    const existing = loadAppState();
+    return {
+      existing,
+      shouldRedirect: isOnboardingEnabled() && !existing?.preferences,
+    };
+  });
+  const [appState, setAppState] = useState(bootstrap.existing ?? DEFAULT_APP_STATE);
+  const shouldRedirect = bootstrap.shouldRedirect;
+  const loaded = !shouldRedirect;
   const [sourceName, setSourceName] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
 
   useEffect(() => {
-    const existing = loadAppState();
-    if (isOnboardingEnabled() && !existing?.preferences) {
+    if (shouldRedirect) {
       router.replace("/onboarding?returnTo=/profile");
-      return;
     }
-    setAppState(existing ?? DEFAULT_APP_STATE);
-    setLoaded(true);
-  }, [router]);
+  }, [router, shouldRedirect]);
 
   useEffect(() => {
     const handler = () => {
@@ -259,7 +269,7 @@ export default function ProfilePage() {
           body: JSON.stringify({ topics: mergedTopics }),
         });
         const data = (await res.json()) as { items?: unknown; counts?: Record<string, number> };
-        const items = Array.isArray(data.items) ? (data.items as any[]) : [];
+        const items = Array.isArray(data.items) ? (data.items as FeedItem[]) : [];
         updateAppState((state) => ({
           ...state,
           connectors: {
@@ -272,7 +282,7 @@ export default function ProfilePage() {
           },
           cache: {
             ...state.cache,
-            connectorItems: { ...state.cache.connectorItems, [id]: items as any },
+            connectorItems: { ...state.cache.connectorItems, [id]: items },
           },
         }));
       } catch {
@@ -283,7 +293,6 @@ export default function ProfilePage() {
 
     updateAppState((state) => {
       const current = state.connectors[id];
-      const { items, counts } = mockFetchConnector(id, current.topics);
       return {
         ...state,
         connectors: {
@@ -291,12 +300,12 @@ export default function ProfilePage() {
           [id]: {
             ...current,
             lastSyncAt: new Date().toISOString(),
-            lastFetchedCounts: counts,
+            lastFetchedCounts: emptyConnectorCounts(id),
           },
         },
         cache: {
           ...state.cache,
-          connectorItems: { ...state.cache.connectorItems, [id]: items },
+          connectorItems: { ...state.cache.connectorItems, [id]: [] },
         },
       };
     });

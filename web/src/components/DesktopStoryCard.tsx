@@ -50,6 +50,20 @@ export function DesktopStoryCard({
   const [verifyClaims, setVerifyClaims] = useState<VerifyClaim[] | null>(null);
   const [imgSrc, setImgSrc] = useState<string>(story.imageUrl);
   const [trustIndex, setTrustIndex] = useState<TrustFieldIndex | null>(null);
+  const candidateUrls = useMemo(() => {
+    const urls: string[] = [];
+    if (story.url) urls.push(story.url);
+    story.perspectives?.forEach((p) => {
+      if (p?.url) urls.push(p.url);
+    });
+    insights.sources?.forEach((s) => {
+      if (s?.url) urls.push(s.url);
+    });
+    story.analysis?.citations?.forEach((c) => {
+      if (c) urls.push(c);
+    });
+    return Array.from(new Set(urls.map((u) => u.trim()).filter(Boolean))).slice(0, 12);
+  }, [story, insights]);
 
   useEffect(() => {
     let active = true;
@@ -193,6 +207,7 @@ export function DesktopStoryCard({
                 articleSummary={story.summary}
                 articleUrl={story.url}
                 source={story.sourceName}
+                candidateUrls={candidateUrls}
                 inline
                 buttonClassName="w-full justify-start"
                 onClaims={(claims) => setVerifyClaims(claims)}
@@ -392,4 +407,3 @@ export function DesktopStoryCard({
     </div>
   );
 }
-

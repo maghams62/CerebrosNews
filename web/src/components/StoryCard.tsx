@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { ActionRow } from "./ActionRow";
 import { VerifyBubble, type VerifyClaim } from "./VerifyBubble";
 import { StoryWithInsights } from "@/types/storyWithInsights";
@@ -32,6 +32,20 @@ export function StoryCard({
   const { story, insights } = item;
   const perspective = story.perspectives[Math.min(perspectiveIndex, Math.max(0, story.perspectives.length - 1))] ?? null;
   const [verifyClaims, setVerifyClaims] = useState<VerifyClaim[] | null>(null);
+  const candidateUrls = useMemo(() => {
+    const urls: string[] = [];
+    if (story.url) urls.push(story.url);
+    story.perspectives?.forEach((p) => {
+      if (p?.url) urls.push(p.url);
+    });
+    insights.sources?.forEach((s) => {
+      if (s?.url) urls.push(s.url);
+    });
+    story.analysis?.citations?.forEach((c) => {
+      if (c) urls.push(c);
+    });
+    return Array.from(new Set(urls.map((u) => u.trim()).filter(Boolean))).slice(0, 12);
+  }, [story, insights]);
 
   return (
     <div className="h-full">
@@ -62,6 +76,7 @@ export function StoryCard({
             articleSummary={story.summary}
             articleUrl={story.url}
             source={story.sourceName}
+            candidateUrls={candidateUrls}
             inline
             buttonClassName="w-full justify-start"
             onClaims={(claims) => setVerifyClaims(claims)}

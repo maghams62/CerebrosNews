@@ -1,5 +1,15 @@
 import { TrustDashboard } from "@/types/insights";
 
+export interface NormalizedDashboard {
+  dashboard: TrustDashboard;
+  fallbackReason: string | null;
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object") return {};
+  return value as Record<string, unknown>;
+}
+
 function clampPercent(value: unknown, fallback = 0): number {
   const n = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(n)) return fallback;
@@ -18,6 +28,14 @@ function safeString(value: unknown, fallback = "n/a"): string {
   return trimmed.length ? trimmed : fallback;
 }
 
+function asAgreement(value: unknown): TrustDashboard["coverage"]["agreement"] {
+  return value === "High" || value === "Medium" || value === "Low" ? value : "Low";
+}
+
+function asConfidence(value: unknown): TrustDashboard["confidence"]["level"] {
+  return value === "High" || value === "Medium" || value === "Low" ? value : "Low";
+}
+
 export function defaultTrustDashboard(): TrustDashboard {
   const nowIso = new Date().toISOString();
   return {
@@ -29,7 +47,13 @@ export function defaultTrustDashboard(): TrustDashboard {
       agreement: "Low",
     },
     confidence: { level: "Low", updatedAtIso: nowIso },
-    missing: { bullets: ["Trust signals not available for this story yet."] },
+    missing: {
+      bullets: [
+        "Trust signals not available for this story yet.",
+        "Trust signals not available for this story yet.",
+        "Trust signals not available for this story yet.",
+      ],
+    },
     provenance: {
       computedFromSources: 0,
       updatedMinsAgo: 0,
@@ -43,54 +67,66 @@ export function normalizeTrustDashboard(raw: TrustDashboard | null | undefined):
     return { dashboard: defaultTrustDashboard(), fallbackReason: "Trust signals not available for this story yet." };
   }
 
-  const selection = raw.selection ?? {};
-  const framing = raw.framing ?? {};
-  const coverage = raw.coverage ?? {};
-  const mix = coverage.mix ?? {};
-  const confidence = raw.confidence ?? {};
-  const missing = raw.missing ?? {};
-  const provenance = raw.provenance ?? {};
+  const selection = asRecord(raw.selection);
+  const framing = asRecord(raw.framing);
+  const coverage = asRecord(raw.coverage);
+  const mix = asRecord(coverage.mix);
+  const confidence = asRecord(raw.confidence);
+  const missing = asRecord(raw.missing);
+  const provenance = asRecord(raw.provenance);
+  const models = asRecord(provenance.models);
+
+  const missingBulletsRaw = Array.isArray(missing.bullets)
+    ? (missing.bullets as unknown[]).map((b) => safeString(b, "")).filter(Boolean)
+    : [];
+  const missingBullets =
+    missingBulletsRaw.length >= 3
+      ? missingBulletsRaw.slice(0, 3)
+      : [
+          ...missingBulletsRaw,
+          ...Array.from({ length: Math.max(0, 3 - missingBulletsRaw.length) }, () =>
+            "Trust signals not available for this story yet."
+          ),
+        ];
 
   const normalized: TrustDashboard = {
     selection: {
-      relevance: clampPercent((selection as any).relevance, 0),
-      freshness: clampPercent((selection as any).freshness, 0),
-      trending: clampPercent((selection as any).trending, 0),
-      informationGain: clampPercent((selection as any).informationGain, 0),
+      relevance: clampPercent(selection.relevance, 0),
+      freshness: clampPercent(selection.freshness, 0),
+      trending: clampPercent(selection.trending, 0),
+      informationGain: clampPercent(selection.informationGain, 0),
     },
     framing: {
-      political: clampPercent((framing as any).political, 0),
-      techSentiment: clampPercent((framing as any).techSentiment, 0),
-      powerLens: clampPercent((framing as any).powerLens, 0),
+      political: clampPercent(framing.political, 0),
+      techSentiment: clampPercent(framing.techSentiment, 0),
+      powerLens: clampPercent(framing.powerLens, 0),
     },
     coverage: {
-      independentSourceCount: clampCount((coverage as any).independentSourceCount, 0),
+      independentSourceCount: clampCount(coverage.independentSourceCount, 0),
       mix: {
-        media: clampCount((mix as any).media, 0),
-        community: clampCount((mix as any).community, 0),
-        official: clampCount((mix as any).official, 0),
+        media: clampCount(mix.media, 0),
+        community: clampCount(mix.community, 0),
+        official: clampCount(mix.official, 0),
       },
-      agreement: ((coverage as any).agreement as TrustDashboard["coverage"]["agreement"]) ?? "Low",
+      agreement: asAgreement(coverage.agreement),
     },
     confidence: {
-      level: ((confidence as any).level as TrustDashboard["confidence"]["level"]) ?? "Low",
-      updatedAtIso: safeString((confidence as any).updatedAtIso, new Date().toISOString()),
+      level: asConfidence(confidence.level),
+      updatedAtIso: safeString(confidence.updatedAtIso, new Date().toISOString()),
     },
     missing: {
-      bullets: Array.isArray((missing as any).bullets) && (missing as any).bullets.length
-        ? (missing as any).bullets.map((b: unknown) => safeString(b, "")).filter(Boolean)
-        : ["Trust signals not available for this story yet."],
+      bullets: missingBullets as [string, string, string],
     },
     provenance: {
-      computedFromSources: clampCount((provenance as any).computedFromSources, 0),
-      updatedMinsAgo: clampCount((provenance as any).updatedMinsAgo, 0),
+      computedFromSources: clampCount(provenance.computedFromSources, 0),
+      updatedMinsAgo: clampCount(provenance.updatedMinsAgo, 0),
       models: {
-        clustering: safeString((provenance as any).models?.clustering, "n/a"),
-        framing: safeString((provenance as any).models?.framing, "n/a"),
-        coverage: safeString((provenance as any).models?.coverage, "n/a"),
+        clustering: safeString(models.clustering, "n/a"),
+        framing: safeString(models.framing, "n/a"),
+        coverage: safeString(models.coverage, "n/a"),
       },
     },
-    vestedInterestHint: (raw as any).vestedInterestHint ?? undefined,
+    vestedInterestHint: typeof raw.vestedInterestHint === "boolean" ? raw.vestedInterestHint : undefined,
   };
 
   const missingRequired =

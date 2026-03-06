@@ -134,6 +134,64 @@ export async function generateTechTags(params: {
   return { tags };
 }
 
+export async function classifyInvestingRelevance(params: {
+  title: string;
+  url?: string | null;
+  summary?: string | null;
+  text?: string | null;
+}): Promise<{ related: boolean; confidence: "low" | "medium" | "high"; reason: string }> {
+  const system =
+    "You classify whether a news item is materially about investing activity. Be strict and return JSON only.";
+  const user = `Classify this item as investing-related only when the main story is about one or more of:
+- funding rounds, fundraises, VC activity
+- LP/GP fund operations
+- M&A, acquisitions, exits
+- IPO or public listing plans
+- valuation and private-market financing
+
+Do NOT classify as investing-related for generic product launches, opinion pieces, or broad market commentary without a concrete investing/deal angle.
+
+Return JSON:
+{
+  "related": true|false,
+  "confidence": "low|medium|high",
+  "reason": "short explanation"
+}
+
+[TITLE]
+${params.title}
+
+[URL]
+${params.url ?? ""}
+
+[SUMMARY]
+${params.summary ?? ""}
+
+[EXCERPT]
+${(params.text ?? "").slice(0, 1400)}`;
+
+  const json = await callOpenAiJson(system, user, {
+    maxTokens: envInt("OPENAI_INVESTING_CLASSIFIER_MAX_TOKENS", 140),
+    timeoutMs: envInt("OPENAI_INVESTING_CLASSIFIER_TIMEOUT_MS", 60_000),
+  });
+
+  const confidenceRaw = String(json.confidence ?? "low").toLowerCase();
+  const confidence: "low" | "medium" | "high" =
+    confidenceRaw === "high" || confidenceRaw === "medium" ? confidenceRaw : "low";
+  const relatedRaw = json.related;
+  const related =
+    typeof relatedRaw === "boolean"
+      ? relatedRaw
+      : typeof relatedRaw === "string"
+        ? relatedRaw.trim().toLowerCase() === "true"
+        : false;
+  return {
+    related,
+    confidence,
+    reason: String(json.reason ?? "").slice(0, 240),
+  };
+}
+
 function hasAiDisclaimer(text: string): boolean {
   const t = text.toLowerCase();
   return t.includes("as an ai") || t.includes("as a language model");
