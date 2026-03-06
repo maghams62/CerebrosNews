@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import React, { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import React, { useMemo, useState } from "react";
 import { AddIntelligenceModal } from "@/components/fundgraph/AddIntelligenceModal";
 import { DemoResetCreditsButton } from "@/components/fundgraph/DemoResetCreditsButton";
 import { FundGraphUnlockBadge } from "@/components/fundgraph/FundGraphUnlockBadge";
@@ -36,9 +36,10 @@ export function FundGraphShell({
   const { cred } = useFundGraphState();
   const pathname = usePathname();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const searchParamQuery = useMemo(() => searchParams.get("q")?.trim() ?? "", [searchParams]);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return new URLSearchParams(window.location.search).get("q")?.trim() ?? "";
+  });
   const [modalOpen, setModalOpen] = useState(false);
 
   const activeTab = useMemo(
@@ -47,10 +48,6 @@ export function FundGraphShell({
         ?.href ?? "/cerebrosfund",
     [pathname]
   );
-
-  useEffect(() => {
-    setSearch(searchParamQuery);
-  }, [searchParamQuery]);
 
   function runSearch(e: React.FormEvent) {
     e.preventDefault();
