@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useFundGraphState } from "@/fundgraph/state";
 import { createSignal } from "@/lib/fundgraph/client";
@@ -31,7 +31,27 @@ export function AddIntelligenceModal({
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const canSubmit = title.trim().length >= 8 && summary.trim().length >= 20 && fundId;
+  useEffect(() => {
+    if (open) return;
+    // Reset transient publish status when the modal closes so success text
+    // only appears after a fresh publish action.
+    setPosted(false);
+    setSubmitError(null);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (!funds.length) {
+      setFundId("");
+      return;
+    }
+    const stillValid = funds.some((entry) => entry.id === fundId);
+    if (!stillValid) {
+      setFundId(funds[0]!.id);
+    }
+  }, [fundId, funds, open]);
+
+  const canSubmit = title.trim().length >= 5 && summary.trim().length >= 15 && Boolean(fundId.trim());
 
   const selectedFundName = useMemo(() => funds.find((f) => f.id === fundId)?.name ?? "Selected fund", [fundId, funds]);
 
@@ -94,7 +114,7 @@ export function AddIntelligenceModal({
           <div>
             <div className="text-xs font-semibold tracking-[0.08em] text-slate-500 uppercase">Publish New Signal</div>
             <h3 className="mt-1 text-2xl font-semibold text-slate-900">Share a structured signal</h3>
-            <p className="mt-1 text-sm text-slate-600">Fast publish flow. Posting adds +3 credits.</p>
+            <p className="mt-1 text-sm text-slate-600">Fast publish flow. Signals are reviewed, and rewards are applied after verification.</p>
           </div>
           <button
             type="button"
@@ -107,12 +127,17 @@ export function AddIntelligenceModal({
 
         {posted ? (
           <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            Your signal is live for {selectedFundName}. +3 credits applied.
+            Thank you. Your signal was submitted for {selectedFundName} and is pending verification. Reward points are pending review.
           </div>
         ) : null}
         {submitError ? (
           <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
             {submitError}
+          </div>
+        ) : null}
+        {!funds.length ? (
+          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            No funds are loaded yet. Refresh the page once fund data is available.
           </div>
         ) : null}
 
@@ -122,6 +147,7 @@ export function AddIntelligenceModal({
             <select
               value={fundId}
               onChange={(e) => setFundId(e.target.value)}
+              disabled={!funds.length}
               className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-slate-400"
             >
               {funds.map((fund) => (
@@ -193,11 +219,13 @@ export function AddIntelligenceModal({
         </div>
 
         <div className="mt-5 flex items-center justify-between">
-          <p className="text-xs text-slate-500">Tip: adding evidence increases community verification speed.</p>
+          <p className="text-xs text-slate-500">
+            {canSubmit ? "Tip: adding evidence increases community verification speed." : "Required: fund, title (5+ chars), summary (15+ chars)."}
+          </p>
           <button
             type="button"
             onClick={submit}
-            disabled={!canSubmit || submitting}
+            disabled={!funds.length || !canSubmit || submitting}
             className="rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
             {submitting ? "Publishing..." : "Publish New Signal"}

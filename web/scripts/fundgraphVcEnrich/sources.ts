@@ -78,11 +78,18 @@ const DOMAIN_OVERRIDES: Record<string, string> = {
 
 const OFFICIAL_PAGE_HARD_NOISE_PATTERNS: RegExp[] = [
   /\berror\s*404\b/i,
+  /\b404\s*:\s*not[_\s-]?found\b/i,
+  /\bcode\s*:\s*deployment[_\s-]?not[_\s-]?found\b/i,
+  /\bdeployment[_\s-]?not[_\s-]?found\b/i,
+  /\bthis\s+deployment\s+cannot\s+be\s+found\b/i,
   /\bpage\s+not\s+found/i,
   /\bnot\s+found\b/i,
   /\bthis\s+page\s+could\s+not\s+be\s+found/i,
   /\bwe couldn['’]t find the page\b/i,
   /\bsorry,\s*this page could not be found\b/i,
+  /\bfor\s+more\s+information\s+and\s+troubleshooting,\s+see\s+our\s+documentation\b/i,
+  /\bno\s+items\s+found\b/i,
+  /\bwhat['’]?s\s+with\s+the\s+dog\b/i,
   /\bskip\s+to\s+content/i,
   /\bskip\s+to\s+main\s+content/i,
   /\bclose\s*menu/i,

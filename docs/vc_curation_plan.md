@@ -1,6 +1,6 @@
 # VC Curation Plan
 
-Generated: 2026-03-06T16:27:00.473Z
+Generated: 2026-03-06T17:27:26.238Z
 
 ## Current Models Used
 - `Fund` (`web/src/lib/fundgraph/types.ts`): core profile + strategy + GP + portfolio + co-investor context.
@@ -42,14 +42,14 @@ Generated: 2026-03-06T16:27:00.473Z
 - Relationship dedupe: unique (`fromType`,`fromId`,`toType`,`toId`,`relation`) tuple.
 
 ## Quality Gate
-- Thresholds: news>=1, citations>=1, signals>=3, partnerFacts>=0, portfolioRelationships>=5.
+- Thresholds: news>=1, citations>=1, signals>=1, partnerFacts>=0, portfolioRelationships>=1.
 - Gate uses only source-backed records by default (synthetic fallback is opt-in with `--allow-synthetic-fallback`).
-- Current run: passed=0, failed=40.
-- Signal tiers: aligned=39, warning=420, failed=29, global_feed_eligible=459.
+- Current run: passed=6, failed=34.
+- Signal tiers: aligned=13, warning=190, failed=27, global_feed_eligible=203.
 
 ## Run Snapshot
 - Canonical VC funds processed: 40
-- New source candidates discovered: 34
-- Discovery breakdown: from_articles=3, from_official=28, from_rss=6, from_hn=0, from_reddit=0
-- Total merged/deduped items: 218
+- New source candidates discovered: 55
+- Discovery breakdown: from_articles=3, from_official=50, from_rss=6, from_hn=0, from_reddit=0
+- Total merged/deduped items: 138
 

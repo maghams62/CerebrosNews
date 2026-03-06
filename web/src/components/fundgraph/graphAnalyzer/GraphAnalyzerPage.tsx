@@ -392,13 +392,13 @@ export function GraphAnalyzerPage({
       try {
         const [fundsResponse, signalsResponse, graphResponse] = await Promise.all([
           listFunds(new URLSearchParams({ limit: "1000" })),
-          listSignals(new URLSearchParams({ limit: "1000" })),
+          listSignals(new URLSearchParams({ limit: "1000", scope: "graph" })),
           getGraphData({
             fundId,
             slug,
             claimId,
             depth: limits.graphDepth,
-            limit: 500,
+            limit: 1000,
           }),
         ]);
 
@@ -890,6 +890,16 @@ export function GraphAnalyzerPage({
 
   return (
     <div className="space-y-6">
+      <section className="rounded-2xl border border-amber-200 bg-amber-50/70 px-4 py-3 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-base font-semibold text-slate-900">Graph Analyzer</h1>
+          <span className="rounded-full border border-amber-300 bg-white px-2 py-0.5 text-[10px] font-bold tracking-[0.08em] text-amber-700 uppercase">
+            Beta
+          </span>
+        </div>
+        <p className="mt-1 text-xs text-slate-600">Experimental surface. Results may change as data quality and graph coverage improve.</p>
+      </section>
+
       <GraphPresetsPanel
         selectedPresetId={presetId}
         onSelectPreset={setPresetId}

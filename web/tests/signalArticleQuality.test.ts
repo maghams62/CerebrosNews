@@ -174,3 +174,36 @@ test("computeSignalArticleQuality fails ambiguous fund mentions without VC conte
   assert.equal(result.qualityTier, "FAILED");
   assert.ok(result.qualityReasons.includes("fund_mention_ambiguous"));
 });
+
+test("computeSignalArticleQuality fails profile-page citations without event context", () => {
+  const signal = mockSignal({
+    title: "Sapphire Ventures: Sapphire Ventures has 80+ exits.",
+    summary: "By the numbers 30+ IPOs 80+ Exits $11.3 B+ Firmwide Assets Under Management.",
+    evidenceUrl: "https://sapphireventures.com/team",
+    evidenceSnippet: "By the numbers 30+ IPOs 80+ Exits $11.3 B+ Firmwide Assets Under Management.",
+    sourceId: "vc-src-profile",
+  });
+  const source = mockSource({
+    id: "vc-src-profile",
+    title: "Sapphire Ventures Team",
+    url: "https://sapphireventures.com/team",
+    rawText:
+      "By the numbers 30+ IPOs 80+ Exits $11.3 B+ Firmwide Assets Under Management. Filter options and team directory listings.",
+  });
+
+  const result = computeSignalArticleQuality({
+    signal,
+    fund: {
+      ...mockFund(),
+      id: "fg-fund-sapphire-1",
+      name: "Sapphire Ventures",
+      slug: "sapphire-ventures",
+      officialUrl: "https://sapphireventures.com",
+    },
+    source,
+    claims: [],
+  });
+
+  assert.equal(result.qualityTier, "FAILED");
+  assert.ok(result.qualityReasons.includes("profile_page_not_news_evidence"));
+});

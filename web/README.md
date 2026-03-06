@@ -208,3 +208,10 @@ Header shows `Cred` and badge tier (`New`, `Contributor`, `Verifier`, `Steward`)
 ## Notes
 
 - The feed includes editorial, community, and social signals.
+
+## Recent Updates (2026-03-06)
+
+- Signals search now matches broader evidence fields, including source URLs, source titles, article snapshots, key facts, and quote URLs.
+- Top-right header search now routes to `/cerebrosfund/signals?q=...` when you are on the Signals tab, and to `/cerebrosfund/funds?q=...` otherwise.
+- Query state is synced from URL params on both Signals and Funds views, so same-route searches update correctly without stale input state.
+- My Profile no longer renders the `Tier & Credit System` and `Tier Benefits Breakdown` panels.

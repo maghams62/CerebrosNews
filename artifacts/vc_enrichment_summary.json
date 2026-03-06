@@ -1,28 +1,53 @@
 {
   "total_vc_funds_processed": 40,
-  "total_new_citations_fetched": 295,
-  "total_new_news_items_fetched": 34,
-  "total_new_portfolio_relationships_added": 3,
+  "total_new_citations_fetched": 132,
+  "total_new_news_items_fetched": 55,
+  "total_new_portfolio_relationships_added": 4,
   "total_new_partner_gp_facts_added": 0,
-  "total_deduped_items_merged": 218,
-  "total_aligned_signals": 39,
-  "total_warning_signals": 420,
-  "total_failed_signals": 29,
-  "total_global_feed_eligible_signals": 459,
+  "total_deduped_items_merged": 138,
+  "total_aligned_signals": 13,
+  "total_warning_signals": 190,
+  "total_failed_signals": 27,
+  "total_global_feed_eligible_signals": 203,
   "top_funds_by_news_volume": [
+    {
+      "fund_id": "fg-fund-menlo-ventures-27",
+      "fund_name": "Menlo Ventures",
+      "count": 8
+    },
+    {
+      "fund_id": "fg-fund-sapphire-ventures-25",
+      "fund_name": "Sapphire Ventures",
+      "count": 5
+    },
+    {
+      "fund_id": "fg-fund-lightspeed-venture-partners-6",
+      "fund_name": "Lightspeed Venture Partners",
+      "count": 5
+    },
     {
       "fund_id": "fg-fund-accel-3",
       "fund_name": "Accel",
-      "count": 3
+      "count": 4
     },
     {
       "fund_id": "fg-fund-lux-capital-34",
       "fund_name": "Lux Capital",
+      "count": 4
+    },
+    {
+      "fund_id": "fg-fund-general-catalyst-7",
+      "fund_name": "General Catalyst",
       "count": 3
     },
     {
-      "fund_id": "fg-fund-menlo-ventures-27",
-      "fund_name": "Menlo Ventures",
+      "fund_id": "fg-fund-craft-ventures-24",
+      "fund_name": "Craft Ventures",
+      "count": 3
+    },
+    {
+      "fund_id": "fg-fund-felicis-29",
+      "fund_name": "Felicis",
       "count": 3
     },
     {
@@ -31,86 +56,61 @@
       "count": 2
     },
     {
-      "fund_id": "fg-fund-benchmark-4",
-      "fund_name": "Benchmark",
-      "count": 2
-    },
-    {
-      "fund_id": "fg-fund-sapphire-ventures-25",
-      "fund_name": "Sapphire Ventures",
-      "count": 2
-    },
-    {
-      "fund_id": "fg-fund-lightspeed-venture-partners-6",
-      "fund_name": "Lightspeed Venture Partners",
-      "count": 2
-    },
-    {
-      "fund_id": "fg-fund-general-catalyst-7",
-      "fund_name": "General Catalyst",
-      "count": 2
-    },
-    {
-      "fund_id": "fg-fund-spark-capital-38",
-      "fund_name": "Spark Capital",
-      "count": 2
-    },
-    {
-      "fund_id": "fg-fund-nea-17",
-      "fund_name": "NEA",
+      "fund_id": "fg-fund-andreessen-horowitz-2",
+      "fund_name": "Andreessen Horowitz",
       "count": 2
     }
   ],
   "top_funds_by_citation_count": [
     {
-      "fund_id": "fg-fund-menlo-ventures-27",
-      "fund_name": "Menlo Ventures",
-      "count": 66
-    },
-    {
       "fund_id": "fg-fund-sapphire-ventures-25",
       "fund_name": "Sapphire Ventures",
-      "count": 64
+      "count": 57
     },
     {
-      "fund_id": "fg-fund-accel-3",
-      "fund_name": "Accel",
-      "count": 59
-    },
-    {
-      "fund_id": "fg-fund-lightspeed-venture-partners-6",
-      "fund_name": "Lightspeed Venture Partners",
-      "count": 58
-    },
-    {
-      "fund_id": "fg-fund-general-catalyst-7",
-      "fund_name": "General Catalyst",
-      "count": 58
-    },
-    {
-      "fund_id": "fg-fund-khosla-ventures-10",
-      "fund_name": "Khosla Ventures",
-      "count": 49
-    },
-    {
-      "fund_id": "fg-fund-tcv-36",
-      "fund_name": "TCV",
-      "count": 44
-    },
-    {
-      "fund_id": "fg-fund-first-round-capital-12",
-      "fund_name": "First Round Capital",
-      "count": 43
+      "fund_id": "fg-fund-felicis-29",
+      "fund_name": "Felicis",
+      "count": 41
     },
     {
       "fund_id": "fg-fund-ribbit-capital-20",
       "fund_name": "Ribbit Capital",
-      "count": 41
+      "count": 34
+    },
+    {
+      "fund_id": "fg-fund-tcv-36",
+      "fund_name": "TCV",
+      "count": 33
+    },
+    {
+      "fund_id": "fg-fund-lightspeed-venture-partners-6",
+      "fund_name": "Lightspeed Venture Partners",
+      "count": 31
+    },
+    {
+      "fund_id": "fg-fund-accel-3",
+      "fund_name": "Accel",
+      "count": 29
     },
     {
       "fund_id": "fg-fund-andreessen-horowitz-2",
       "fund_name": "Andreessen Horowitz",
-      "count": 39
+      "count": 28
+    },
+    {
+      "fund_id": "fg-fund-battery-ventures-28",
+      "fund_name": "Battery Ventures",
+      "count": 28
+    },
+    {
+      "fund_id": "fg-fund-menlo-ventures-27",
+      "fund_name": "Menlo Ventures",
+      "count": 25
+    },
+    {
+      "fund_id": "fg-fund-union-square-ventures-13",
+      "fund_name": "Union Square Ventures",
+      "count": 23
     }
   ]
 }

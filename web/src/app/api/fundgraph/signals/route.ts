@@ -5,7 +5,7 @@ import { getFundById } from "@/lib/fundgraph/funds";
 import { applyContribution } from "@/lib/fundgraph/gamification";
 import { createId } from "@/lib/fundgraph/ids";
 import { getFundgraphDataMode } from "@/lib/fundgraph/mode";
-import { curateSignalsForFeed } from "@/lib/fundgraph/quality";
+import { curateSignalsForFeed, filterSignalsForGraph } from "@/lib/fundgraph/quality";
 import { addSignal, ensureUser, getUserById, readFundgraphDb } from "@/lib/fundgraph/store";
 import { Signal } from "@/lib/fundgraph/types";
 
@@ -33,16 +33,20 @@ function parseLimit(value: string | null, fallback = 50): number {
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const fundId = (url.searchParams.get("fundId") ?? "").trim();
+  const scope = (url.searchParams.get("scope") ?? "feed").trim().toLowerCase();
   const limit = parseLimit(url.searchParams.get("limit"), 50);
   const db = await readFundgraphDb();
   const all = [...(db.signals ?? [])].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
-  const curated = curateSignalsForFeed(all, { maxPerFund: 0, surface: fundId ? "fund" : "global" });
-
-  const filtered = curated.filter((signal) => (fundId ? signal.fundId === fundId : true)).slice(0, limit);
+  const scopedSignals =
+    scope === "graph"
+      ? filterSignalsForGraph(all)
+      : curateSignalsForFeed(all, { maxPerFund: 0, surface: fundId ? "fund" : "global" });
+  const filtered = scopedSignals.filter((signal) => (fundId ? signal.fundId === fundId : true)).slice(0, limit);
 
   return NextResponse.json({
     mode: getFundgraphDataMode(),
     count: filtered.length,
+    scope,
     signals: filtered,
     realModePlaceholder: getFundgraphDataMode() === "real",
   });

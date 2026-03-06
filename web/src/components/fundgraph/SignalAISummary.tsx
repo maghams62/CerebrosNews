@@ -43,6 +43,15 @@ export function SignalAISummary({
     }
     return map;
   }, [evidence]);
+  const uniqueEvidence = useMemo(() => {
+    const seen = new Set<string>();
+    return evidence.filter((item) => {
+      const key = `${item.id}|${(item.url || "").trim().toLowerCase()}|${item.snippet.trim().toLowerCase().slice(0, 220)}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [evidence]);
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -56,10 +65,10 @@ export function SignalAISummary({
             ))}
           </ul>
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {evidence.slice(0, 1).map((item) => (
-              <CitationChip key={`header-${item.id}`} citationId={item.id} label={item.source_type} onClick={onCitationClick} />
+            {uniqueEvidence.slice(0, 1).map((item, index) => (
+              <CitationChip key={`header-${item.id}-${index + 1}`} citationId={item.id} label={item.source_type} onClick={onCitationClick} />
             ))}
-            {!evidence.length ? <span className="text-xs text-slate-500">No citations available.</span> : null}
+            {!uniqueEvidence.length ? <span className="text-xs text-slate-500">No citations available.</span> : null}
           </div>
         </>
       ) : (
@@ -69,10 +78,10 @@ export function SignalAISummary({
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-slate-700">
             <span className="font-semibold text-slate-900">Evidence used:</span>
-            {evidence.slice(0, 4).map((item) => (
-              <CitationChip key={`header-${item.id}`} citationId={item.id} label={item.id} onClick={onCitationClick} />
+            {uniqueEvidence.slice(0, 4).map((item, index) => (
+              <CitationChip key={`header-${item.id}-${index + 1}`} citationId={item.id} label={item.id} onClick={onCitationClick} />
             ))}
-            {!evidence.length ? <span className="text-slate-500">No citations available.</span> : null}
+            {!uniqueEvidence.length ? <span className="text-slate-500">No citations available.</span> : null}
           </div>
           <p className="mt-2 text-sm text-slate-700">{aiSummary.summary_paragraph}</p>
         </>
@@ -96,9 +105,9 @@ export function SignalAISummary({
                   </p>
                   <p className="mt-1 text-sm text-slate-700">{step.detail}</p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
-                    {step.citations.map((citationId) => (
+                    {Array.from(new Set(step.citations)).map((citationId, index) => (
                       <CitationChip
-                        key={`${step.step_num}-${citationId}`}
+                        key={`${step.step_num}-${citationId}-${index + 1}`}
                         citationId={citationId}
                         label={titleByCitation.get(citationId) ? `${citationId} · ${titleByCitation.get(citationId)}` : citationId}
                         onClick={onCitationClick}

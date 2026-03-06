@@ -54,7 +54,7 @@ function SignalCardHeader({
       <button
         type="button"
         onClick={onOpenDetails}
-        className="line-clamp-2 text-left text-[1.1rem] font-semibold leading-snug text-slate-900 transition hover:text-slate-700"
+        className="line-clamp-2 w-full break-words text-left text-[1.1rem] font-semibold leading-snug text-slate-900 transition hover:text-slate-700"
       >
         {title}
       </button>
@@ -102,7 +102,7 @@ function SignalCardSummary({
     <button
       type="button"
       onClick={onOpenDetails}
-      className="line-clamp-3 w-full text-left text-base leading-relaxed text-slate-600 transition hover:text-slate-700"
+      className="line-clamp-3 w-full break-words text-left text-base leading-relaxed text-slate-600 transition hover:text-slate-700"
     >
       {summary}
     </button>

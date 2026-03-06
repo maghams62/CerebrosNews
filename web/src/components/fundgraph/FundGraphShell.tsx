@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import React, { useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import React, { useEffect, useMemo, useState } from "react";
 import { AddIntelligenceModal } from "@/components/fundgraph/AddIntelligenceModal";
 import { DemoResetCreditsButton } from "@/components/fundgraph/DemoResetCreditsButton";
 import { FundGraphUnlockBadge } from "@/components/fundgraph/FundGraphUnlockBadge";
@@ -12,6 +12,7 @@ import { FundGraphDataMode } from "@/fundgraph/types";
 type Tab = {
   href: string;
   label: string;
+  beta?: boolean;
 };
 
 const TABS: Tab[] = [
@@ -19,7 +20,7 @@ const TABS: Tab[] = [
   { href: "/cerebrosfund/funds", label: "Funds" },
   { href: "/cerebrosfund/shortlist", label: "Shortlist" },
   { href: "/cerebrosfund/signals", label: "Signals" },
-  { href: "/cerebrosfund/graph", label: "Graph Analyzer" },
+  { href: "/cerebrosfund/graph", label: "Graph Analyzer", beta: true },
   { href: "/cerebrosfund/profile", label: "My Profile" },
 ];
 
@@ -35,6 +36,8 @@ export function FundGraphShell({
   const { cred } = useFundGraphState();
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const searchParamQuery = useMemo(() => searchParams.get("q")?.trim() ?? "", [searchParams]);
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -45,14 +48,19 @@ export function FundGraphShell({
     [pathname]
   );
 
+  useEffect(() => {
+    setSearch(searchParamQuery);
+  }, [searchParamQuery]);
+
   function runSearch(e: React.FormEvent) {
     e.preventDefault();
     const value = search.trim();
+    const basePath = activeTab === "/cerebrosfund/signals" ? "/cerebrosfund/signals" : "/cerebrosfund/funds";
     if (!value) {
-      router.push("/cerebrosfund/funds");
+      router.push(basePath);
       return;
     }
-    router.push(`/cerebrosfund/funds?q=${encodeURIComponent(value)}`);
+    router.push(`${basePath}?q=${encodeURIComponent(value)}`);
   }
 
   return (
@@ -74,7 +82,14 @@ export function FundGraphShell({
                       active ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    {tab.label}
+                    <span className="inline-flex items-center gap-1.5">
+                      <span>{tab.label}</span>
+                      {tab.beta ? (
+                        <span className="rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[9px] font-bold tracking-[0.08em] text-amber-700 uppercase">
+                          Beta
+                        </span>
+                      ) : null}
+                    </span>
                   </Link>
                 );
               })}
@@ -121,7 +136,14 @@ export function FundGraphShell({
                       active ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"
                     }`}
                   >
-                    {tab.label}
+                    <span className="inline-flex items-center gap-1">
+                      <span>{tab.label}</span>
+                      {tab.beta ? (
+                        <span className="rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[8px] font-bold tracking-[0.08em] text-amber-700 uppercase">
+                          Beta
+                        </span>
+                      ) : null}
+                    </span>
                   </Link>
                 );
               })}

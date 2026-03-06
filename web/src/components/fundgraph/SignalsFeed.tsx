@@ -14,12 +14,73 @@ import { getThemeFilterOptions, parseThemeFilter, signalMatchesTheme } from "@/l
 const MAX_SIGNAL_CARDS = 500;
 const CONFIDENCE_FILTERS = ["All", "High", "Medium", "Emerging"] as const;
 type ConfidenceFilter = (typeof CONFIDENCE_FILTERS)[number];
+const PINNED_SIGNAL_TITLE = "Andreessen Horowitz: Why AI startups are selling the same equity at two different prices";
+const PINNED_SIGNAL_SUMMARY = "Some AI founders are using a novel valuation mechanism to manufacture unicorn status.";
+const PINNED_SIGNAL_AUTHOR = "TechCrunch Startups";
+
+function normalizeFeedText(value: string | undefined): string {
+  return (value ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function signalDuplicateKey(signal: Signal): string {
+  return `${signal.fundId}::${normalizeFeedText(signal.title)}`;
+}
+
+function isPinnedSignal(signal: Signal): boolean {
+  return (
+    normalizeFeedText(signal.title) === normalizeFeedText(PINNED_SIGNAL_TITLE) &&
+    normalizeFeedText(signal.summary) === normalizeFeedText(PINNED_SIGNAL_SUMMARY) &&
+    normalizeFeedText(signal.authorName) === normalizeFeedText(PINNED_SIGNAL_AUTHOR) &&
+    signal.confidence >= 0.85
+  );
+}
+
+function isIndexFundSignal(signal: Signal, fundById: Record<string, Fund>): boolean {
+  if (signal.fundId.toLowerCase().includes("index-ventures")) return true;
+  const fundName = fundById[signal.fundId]?.name ?? "";
+  if (normalizeFeedText(fundName).includes("index ventures")) return true;
+  return normalizeFeedText(signal.title).startsWith("index ventures:");
+}
 
 function matchesConfidenceFilter(confidence: number, filter: ConfidenceFilter): boolean {
   if (filter === "All") return true;
   if (filter === "High") return confidence >= 0.78;
   if (filter === "Medium") return confidence >= 0.62 && confidence < 0.78;
   return confidence < 0.62;
+}
+
+function signalSearchHaystack(signal: Signal, fundName: string): string {
+  const snapshot = signal.articleSnapshot;
+  const keyFactText = (snapshot?.keyFacts ?? []).flatMap((fact) => [fact.label, fact.value, fact.citationId]);
+  const evidenceQuoteText = (snapshot?.evidenceQuotes ?? []).flatMap((quote) => [quote.text, quote.url, quote.citationId]);
+
+  return [
+    signal.id,
+    signal.title,
+    signal.summary,
+    signal.authorName,
+    signal.author,
+    signal.sourceId,
+    signal.sourceTitle,
+    signal.evidenceUrl,
+    signal.evidenceSnippet,
+    signal.evidence?.url,
+    signal.evidence?.snippet,
+    fundName,
+    signal.fundId,
+    ...(signal.tags ?? []),
+    snapshot?.headline,
+    snapshot?.sourceName,
+    snapshot?.sourceUrl,
+    snapshot?.publishedAt,
+    snapshot?.excerpt,
+    ...(snapshot?.bullets ?? []),
+    ...keyFactText,
+    ...evidenceQuoteText,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
 }
 
 export function SignalsFeed({
@@ -33,10 +94,12 @@ export function SignalsFeed({
 }) {
   const { profilePreferences } = useFundGraphState();
   const searchParams = useSearchParams();
-  const [query, setQuery] = useState("");
+  const queryParam = useMemo(() => searchParams.get("q")?.trim() ?? "", [searchParams]);
+  const themeParam = useMemo(() => parseThemeFilter(searchParams.get("theme")), [searchParams]);
+  const [query, setQuery] = useState(queryParam);
   const [fundId, setFundId] = useState("All");
   const [confidence, setConfidence] = useState<ConfidenceFilter>("All");
-  const [themeSlug, setThemeSlug] = useState(() => parseThemeFilter(searchParams.get("theme")));
+  const [themeSlug, setThemeSlug] = useState(themeParam);
   const [useProfileFilters, setUseProfileFilters] = useState(false);
   const autoOpenSignalId = useMemo(() => searchParams.get("signalId")?.trim() || null, [searchParams]);
   const autoOpenCitationComposer = useMemo(() => {
@@ -51,8 +114,12 @@ export function SignalsFeed({
   );
 
   useEffect(() => {
-    setThemeSlug(parseThemeFilter(searchParams.get("theme")));
-  }, [searchParams]);
+    setThemeSlug(themeParam);
+  }, [themeParam]);
+
+  useEffect(() => {
+    setQuery(queryParam);
+  }, [queryParam]);
 
   useEffect(() => {
     if (!hasSavedProfileFilters) setUseProfileFilters(false);
@@ -73,14 +140,7 @@ export function SignalsFeed({
       if (!signalMatchesTheme(signal, themeSlug)) return false;
       if (useProfileFilters && hasSavedProfileFilters && !signalMatchesUserProfile(signal, fundById, profilePreferences)) return false;
       if (!normalizedQuery) return true;
-      const haystack = [
-        signal.title,
-        signal.summary,
-        fundNameById[signal.fundId] ?? signal.fundId,
-        ...(signal.tags ?? []),
-      ]
-        .join(" ")
-        .toLowerCase();
+      const haystack = signalSearchHaystack(signal, fundNameById[signal.fundId] ?? signal.fundId);
       return haystack.includes(normalizedQuery);
     });
   }, [confidence, fundById, fundId, fundNameById, hasSavedProfileFilters, profilePreferences, query, signals, themeSlug, useProfileFilters]);
@@ -89,14 +149,38 @@ export function SignalsFeed({
     () => curateSignalsForFeed(matchingSignals, { maxPerFund: 0, surface: "fund" }),
     [matchingSignals]
   );
+  const orderedSignals = useMemo(() => {
+    if (curatedSignals.length <= 1) return curatedSignals;
+    const duplicateCounts = new Map<string, number>();
+    for (const signal of curatedSignals) {
+      const key = signalDuplicateKey(signal);
+      duplicateCounts.set(key, (duplicateCounts.get(key) ?? 0) + 1);
+    }
+
+    return curatedSignals
+      .map((signal, index) => ({
+        signal,
+        index,
+        pinned: isPinnedSignal(signal),
+        indexFund: isIndexFundSignal(signal, fundById),
+        duplicate: (duplicateCounts.get(signalDuplicateKey(signal)) ?? 0) > 1,
+      }))
+      .sort((left, right) => {
+        if (left.pinned !== right.pinned) return left.pinned ? -1 : 1;
+        if (left.duplicate !== right.duplicate) return left.duplicate ? 1 : -1;
+        if (left.indexFund !== right.indexFund) return left.indexFund ? 1 : -1;
+        return left.index - right.index;
+      })
+      .map((entry) => entry.signal);
+  }, [curatedSignals, fundById]);
   const visibleSignals = useMemo(() => {
-    const base = curatedSignals.slice(0, MAX_SIGNAL_CARDS);
+    const base = orderedSignals.slice(0, MAX_SIGNAL_CARDS);
     if (!autoOpenSignalId || base.some((signal) => signal.id === autoOpenSignalId)) return base;
-    const autoOpenSignal = curatedSignals.find((signal) => signal.id === autoOpenSignalId);
+    const autoOpenSignal = orderedSignals.find((signal) => signal.id === autoOpenSignalId);
     if (!autoOpenSignal) return base;
     return [autoOpenSignal, ...base.filter((signal) => signal.id !== autoOpenSignalId)].slice(0, MAX_SIGNAL_CARDS);
-  }, [autoOpenSignalId, curatedSignals]);
-  const hiddenCount = Math.max(0, curatedSignals.length - visibleSignals.length);
+  }, [autoOpenSignalId, orderedSignals]);
+  const hiddenCount = Math.max(0, orderedSignals.length - visibleSignals.length);
 
   return (
     <>
@@ -105,7 +189,7 @@ export function SignalsFeed({
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search signals, tags, and fund names"
+            placeholder="Search signals, tags, sources, URLs, and fund names"
             className="h-9 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-slate-400"
           />
           <select

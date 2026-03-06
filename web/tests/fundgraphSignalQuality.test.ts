@@ -39,7 +39,7 @@ test("quality filter removes noisy meta-tag-only signals", () => {
   assert.equal(curated.length, 0);
 });
 
-test("feed curation dedupes same event across different funds", () => {
+test("feed curation keeps same event when linked to different funds", () => {
   const sourceUrl = "https://techcrunch.com/2026/03/05/lio-series-a/?utm_source=feed";
   const duplicateA = baseSignal("dup-a", {
     fundId: "fund-a",
@@ -54,7 +54,7 @@ test("feed curation dedupes same event across different funds", () => {
   });
 
   const curated = curateSignalsForFeed([duplicateA, duplicateB], { maxPerFund: 5 });
-  assert.equal(curated.length, 1);
+  assert.equal(curated.length, 2);
 });
 
 test("high-quality domain-tagged signals are preserved", () => {
@@ -91,5 +91,28 @@ test("global and fund surfaces both show quality-passing tiers (ALIGNED + WARNIN
   assert.deepEqual(
     fundSignals.map((signal) => signal.id).sort(),
     ["aligned", "warning"]
+  );
+});
+
+test("curation removes profile/about-page style signals even if tier is WARNING", () => {
+  const profileSignal = baseSignal("profile-warning", {
+    qualityTier: "WARNING",
+    title: "Lightspeed Venture Partners: team includes Venture and Operating Partners",
+    summary:
+      "Filter options Expertise filter All expertises Investors Specialists Venture and Operating Partners Location filter All locations",
+    evidenceUrl: "https://www.lsvp.com/team",
+    evidenceSnippet: "Filter options Expertise filter All expertises Investors Specialists Venture and Operating Partners",
+  });
+  const eventSignal = baseSignal("event-warning", {
+    qualityTier: "WARNING",
+    title: "Lightspeed Venture Partners: portfolio company announced a new Series B round",
+    summary: "A portfolio company announced a $45M Series B round led by Lightspeed and two co-investors.",
+    evidenceUrl: "https://www.reuters.com/world/us/startup-raises-series-b-2026-03-06/",
+  });
+
+  const curated = curateSignalsForFeed([profileSignal, eventSignal], { maxPerFund: 0, surface: "global" });
+  assert.deepEqual(
+    curated.map((signal) => signal.id),
+    ["event-warning"]
   );
 });

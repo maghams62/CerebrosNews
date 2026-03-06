@@ -37,3 +37,14 @@ test("boilerplate detector catches address/nav scrape blobs", () => {
   assert.equal(isLikelyBoilerplateScrapeText(addressBlob), true);
   assert.equal(isLikelyBoilerplateScrapeText(navBlob), true);
 });
+
+test("normalizeFundgraphText truncates at natural boundaries", () => {
+  const raw =
+    "Accel shared that portfolio companies are expanding AI go-to-market partnerships across enterprise and fintech segments while also increasing operating headcount in core regions.";
+  const truncated = normalizeFundgraphText(raw, 90);
+  assert.equal(truncated.endsWith("..."), true);
+  assert.equal(/\s\.\.\.$/.test(truncated), false);
+  const prefix = truncated.slice(0, -3);
+  const nextChar = raw.slice(prefix.length, prefix.length + 1);
+  assert.equal(nextChar === "" || nextChar === " " || nextChar === "." || nextChar === ",", true);
+});

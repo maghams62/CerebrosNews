@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AccountSnapshotCard } from "@/components/fundgraph/profile/AccountSnapshotCard";
 import { CreditsHowItWorksCard } from "@/components/fundgraph/CreditsHowItWorksCard";
-import { CreditEconomyPanel } from "@/components/fundgraph/profile/CreditEconomyPanel";
 import { MyContributionActivity } from "@/components/fundgraph/profile/MyContributionActivity";
 import { MyMemosPanel } from "@/components/fundgraph/profile/MyMemosPanel";
 import { PersonalizedOutputPanel } from "@/components/fundgraph/profile/PersonalizedOutputPanel";
@@ -14,7 +13,6 @@ import { ProfileHeader } from "@/components/fundgraph/profile/ProfileHeader";
 import { ProfileRecommendationCard } from "@/components/fundgraph/profile/ProfileRecommendationsList";
 import { QuickAccessPanel } from "@/components/fundgraph/profile/QuickAccessPanel";
 import { TierCreditSummary } from "@/components/fundgraph/profile/TierCreditSummary";
-import { TierBenefitsPanel } from "@/components/fundgraph/profile/TierBenefitsPanel";
 import { buildPreferenceNarrative, clampScore, formatMillions } from "@/components/fundgraph/profile/profileHelpers";
 import { useFundGraphState } from "@/fundgraph/state";
 import { Fund, FundCategory, FundStage, UserProfile } from "@/fundgraph/types";
@@ -486,11 +484,6 @@ export function ProfileControlCenter() {
       <div className="grid gap-4 xl:grid-cols-2">
         <MyMemosPanel memos={activity.recent.memos} />
         <MyContributionActivity events={activity.recent.contributionEvents} recentSignals={activity.recent.publishedSignals} />
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        <CreditEconomyPanel tier={tier} />
-        <TierBenefitsPanel tier={tier} />
       </div>
 
       {showCreditsGuide ? (

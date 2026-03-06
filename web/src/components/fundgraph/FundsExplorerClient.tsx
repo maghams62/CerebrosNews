@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FundCard } from "@/components/fundgraph/FundCard";
 import { Fund } from "@/fundgraph/types";
 
@@ -13,6 +13,11 @@ export function FundsExplorerClient({ funds, initialQuery = "" }: { funds: Fund[
   const [stage, setStage] = useState("All");
   const [geo, setGeo] = useState("All");
   const [query, setQuery] = useState(initialQuery);
+
+  useEffect(() => {
+    setQuery(initialQuery);
+  }, [initialQuery]);
+
   const sectorFilters = useMemo(() => ["All", ...uniqueSorted(funds.flatMap((fund) => fund.sectors ?? []))], [funds]);
   const stageFilters = useMemo(() => ["All", ...uniqueSorted(funds.flatMap((fund) => fund.stages ?? []))], [funds]);
   const geoFilters = useMemo(

@@ -25,9 +25,9 @@ export function FundGraphUnlockBadge({
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Open credits"
-        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-base transition hover:bg-slate-50"
+        className="inline-flex h-7 items-center rounded-full border border-slate-200 bg-white px-2.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-600 transition hover:bg-slate-50"
       >
-        <span aria-hidden>⚡</span>
+        Credits
       </button>
 
       <AnimatePresence>

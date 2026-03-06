@@ -71,6 +71,32 @@ function sourceTypeFromSignal(signal: Signal): string {
   return "SOURCE";
 }
 
+function dedupeEvidenceItems(evidence: SignalReport["evidence"]): SignalReport["evidence"] {
+  const seenContent = new Set<string>();
+  const idCounts = new Map<string, number>();
+  const out: SignalReport["evidence"] = [];
+
+  for (const item of evidence) {
+    const contentKey = `${(item.url || "").trim().toLowerCase()}|${item.title.trim().toLowerCase()}|${item.snippet
+      .trim()
+      .toLowerCase()
+      .slice(0, 260)}`;
+    if (contentKey.trim() && seenContent.has(contentKey)) continue;
+    if (contentKey.trim()) seenContent.add(contentKey);
+
+    const baseId = (item.id || "ev-item").trim() || "ev-item";
+    const seen = idCounts.get(baseId) ?? 0;
+    idCounts.set(baseId, seen + 1);
+    const nextId = seen === 0 ? baseId : `${baseId}-${seen + 1}`;
+    out.push({
+      ...item,
+      id: nextId,
+    });
+  }
+
+  return out;
+}
+
 function buildEvidence(signal: Signal): SignalReport["evidence"] {
   const snapshot = signal.articleSnapshot;
   if (snapshot) {
@@ -93,8 +119,8 @@ function buildEvidence(signal: Signal): SignalReport["evidence"] {
       why_used: "Direct quote extracted from the linked source content.",
       extracted_facts: keyFacts,
     }));
-    if (quoteItems.length) return quoteItems;
-    return [
+    if (quoteItems.length) return dedupeEvidenceItems(quoteItems);
+    return dedupeEvidenceItems([
       {
         id: `ev-${baseId}-primary`,
         source_type: sourceType,
@@ -105,7 +131,7 @@ function buildEvidence(signal: Signal): SignalReport["evidence"] {
         why_used: "Primary article snapshot used for this signal.",
         extracted_facts: keyFacts,
       },
-    ];
+    ]);
   }
 
   const url = signal.evidenceUrl || signal.evidence?.url || "";
@@ -119,7 +145,7 @@ function buildEvidence(signal: Signal): SignalReport["evidence"] {
       title = "Signal citation";
     }
   }
-  return [
+  return dedupeEvidenceItems([
     {
       id: `ev-${signal.id}-1`,
       source_type: sourceTypeFromSignal(signal),
@@ -130,7 +156,7 @@ function buildEvidence(signal: Signal): SignalReport["evidence"] {
       why_used: "Provided as supporting context for this signal.",
       extracted_facts: [],
     },
-  ];
+  ]);
 }
 
 function buildScore(signal: Signal, evidence: SignalReport["evidence"]): SignalReport["score"] {
@@ -298,7 +324,7 @@ export function buildSignalReport(signal: Signal, options?: { fundName?: string 
   const verdict = status === "verified" ? "Verified" : status === "contested" ? "Contested" : "Unverified";
 
   const snapshot = signal.articleSnapshot;
-  const citationIds = evidence.map((item) => item.id);
+  const citationIds = Array.from(new Set(evidence.map((item) => item.id)));
   const evidenceHost = snapshot?.sourceName || evidence[0]?.title || "community source";
   const hasVerificationConsensus = verifies > disputes;
   const ambiguitySignals: string[] = [];

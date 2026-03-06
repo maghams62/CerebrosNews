@@ -71,12 +71,13 @@ export function SignalEvidenceList({
             No evidence citations are available for this signal yet.
           </div>
         ) : null}
-        {visibleEvidence.map((item) => {
+        {visibleEvidence.map((item, index) => {
           const bullets = snippetBullets(item.snippet);
+          const domEvidenceId = `${item.id}-${index + 1}`;
           return (
           <article
-            key={item.id}
-            id={`signal-evidence-${item.id}`}
+            key={domEvidenceId}
+            id={`signal-evidence-${domEvidenceId}`}
             className={`rounded-xl border p-3 transition ${
               focusedEvidenceId === item.id
                 ? "border-sky-300 bg-sky-50 shadow-[0_0_0_1px_rgba(56,189,248,0.35)]"
@@ -94,11 +95,13 @@ export function SignalEvidenceList({
             {bullets.length >= 2 ? (
               <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-slate-700">
                 {bullets.map((entry) => (
-                  <li key={`${item.id}-${entry}`}>{entry}</li>
+                  <li key={`${item.id}-${entry}`} className="break-words">
+                    {entry}
+                  </li>
                 ))}
               </ul>
             ) : (
-              <p className="mt-1 text-sm text-slate-700">{normalizeFundgraphText(item.snippet, 500)}</p>
+              <p className="mt-1 break-words text-sm text-slate-700">{normalizeFundgraphText(item.snippet, 500)}</p>
             )}
             {!compact ? (
               <>

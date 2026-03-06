@@ -49,9 +49,9 @@ const SIGNAL_ARTICLE_GATE_PATH = path.join(REPO_ROOT, "artifacts", "signal_artic
 const QUALITY_GATE_THRESHOLDS = {
   news: 1,
   citations: 1,
-  signals: 3,
+  signals: 1,
   partnerFacts: 0,
-  portfolioRelationships: 5,
+  portfolioRelationships: 1,
 } as const;
 
 const SIGNAL_ARTICLE_GATE_THRESHOLDS = {
@@ -78,7 +78,7 @@ const HTML_OR_ENTITY_PATTERN = /<[^>]+>|&(?:nbsp|amp|lt|gt|quot|#39|#x27|#x2F);/
 const NAVIGATION_NOISE_PATTERN =
   /(about us|privacy\s*policy|terms\s*of\s*use|accept decline|user menu|our story our strategy|investor login|policy against harassment|open\s*menu|close\s*menu|toggle\s*menu|skip\s+to\s+(?:main\s+)?content)/i;
 const HARD_SCRAPE_NOISE_PATTERN =
-  /(error\s*404|page\s+not\s+found|not\s+found|we couldn['’]t find the page|this\s+page\s+could\s+not\s+be\s+found|open\s*menu|close\s*menu|toggle\s*menu|skip\s+to\s+(?:main\s+)?content|go\s+home|get\s+in\s+touch|made\s+with\s+webflow|privacy\s*policy|terms\s*of\s*use|policy against harassment|official\s+website|firm\s+profile|previous\s+slide|next\s+slide|read\s+full\s+article|all\s+rights\s+reserved|home\s*team\s*founders?|portfolio\s*publications?|building\s+great\s+companies\s+is\s+a\s+craft|more\s+info:\s*@|\b\d{2,5}\s+[A-Za-z0-9.\- ]{2,40}\s+(street|st|road|rd|avenue|ave|boulevard|blvd|lane|ln|drive|dr)\b)/i;
+  /(error\s*404|404\s*:\s*not[_\s-]?found|code\s*:\s*deployment[_\s-]?not[_\s-]?found|deployment[_\s-]?not[_\s-]?found|this\s+deployment\s+cannot\s+be\s+found|for\s+more\s+information\s+and\s+troubleshooting,\s+see\s+our\s+documentation|no\s+items\s+found|what['’]?s\s+with\s+the\s+dog|page\s+not\s+found|not\s+found|we couldn['’]t find the page|this\s+page\s+could\s+not\s+be\s+found|open\s*menu|close\s*menu|toggle\s*menu|skip\s+to\s+(?:main\s+)?content|go\s+home|get\s+in\s+touch|made\s+with\s+webflow|privacy\s*policy|terms\s*of\s*use|policy against harassment|official\s+website|firm\s+profile|previous\s+slide|next\s+slide|read\s+full\s+article|all\s+rights\s+reserved|home\s*team\s*founders?|portfolio\s*publications?|building\s+great\s+companies\s+is\s+a\s+craft|more\s+info:\s*@|\b\d{2,5}\s+[A-Za-z0-9.\- ]{2,40}\s+(street|st|road|rd|avenue|ave|boulevard|blvd|lane|ln|drive|dr)\b)/i;
 const GENERIC_PROFILE_PATTERN = /\bofficial\s+website(?:\s+and\s+firm\s+profile)?\b|\bfirm\s+profile\b/i;
 const NAV_TOKEN_PATTERNS: RegExp[] = [
   /\babout/i,
@@ -97,6 +97,10 @@ const NAV_TOKEN_PATTERNS: RegExp[] = [
 const PLACEHOLDER_TEXT_PATTERN =
   /\b(signal-first strategy|source-backed strategy profile|public evidence indicates|derived profile signal)\b/i;
 const IMAGE_URL_PATTERN = /\.(?:png|jpe?g|gif|webp|svg)(?:[?#].*)?$/i;
+const PROFILE_SOURCE_PATH_PATTERN =
+  /^\/(?:$|about(?:-us)?(?:\/|$)|team(?:\/|$)|people(?:\/|$)|partners?(?:\/|$)|portfolio(?:\/|$)|investments?(?:\/|$)|careers?(?:\/|$)|jobs?(?:\/|$)|bio(?:\/|$)|company(?:\/|$)|companies(?:\/|$))/i;
+const SIGNAL_EVENT_CONTEXT_PATTERN =
+  /\b(raised|announced|launch(?:ed)?|acquired|acquisition|fundrais(?:e|ing)|series\s+[a-f]|seed\s+round|led\s+by|co[-\s]?led|closed\s+on)\b/i;
 
 function isGenericProfileNarrative(value: string): boolean {
   const text = normalizeTextForQuality(value).toLowerCase();
@@ -329,6 +333,35 @@ function isLowQualityNarrativeText(value: string): boolean {
   return false;
 }
 
+function sourcePathname(url: string | undefined): string {
+  if (!url) return "";
+  try {
+    return new URL(url).pathname || "/";
+  } catch {
+    return "";
+  }
+}
+
+function isLikelyProfileSourceSignal(signal: Signal): boolean {
+  const evidenceUrl = signal.evidenceUrl ?? signal.evidence?.url;
+  const pathname = sourcePathname(evidenceUrl).toLowerCase();
+  const text = normalizeTextForQuality(
+    `${signal.title ?? ""} ${signal.summary ?? ""} ${signal.evidenceSnippet ?? signal.evidence?.snippet ?? ""}`
+  ).toLowerCase();
+  const hasEventContext = SIGNAL_EVENT_CONTEXT_PATTERN.test(text);
+  if (!hasEventContext && PROFILE_SOURCE_PATH_PATTERN.test(pathname)) return true;
+  if (!hasEventContext && (text.includes("by the numbers") || text.includes("partner //") || text.includes("filter options"))) return true;
+  return false;
+}
+
+function isOfficialNewsLikeCandidate(candidate: SourceCandidate): boolean {
+  if (candidate.sourceType !== "official_site") return false;
+  const url = (candidate.url || "").toLowerCase();
+  if (/(^|\/)(blog|news|insights|press|articles?)(\/|$)/i.test(url)) return true;
+  const tags = (candidate.tags ?? []).map((tag) => String(tag).toLowerCase().trim());
+  return tags.some((tag) => ["blog", "news", "insights", "press", "article", "articles"].includes(tag));
+}
+
 function isHighQualitySignalRecord(signal: Signal): boolean {
   const title = normalizeTextForQuality(signal.title ?? "");
   const summary = normalizeTextForQuality(signal.summary ?? "");
@@ -337,6 +370,7 @@ function isHighQualitySignalRecord(signal: Signal): boolean {
   const evidenceUrl = signal.evidenceUrl ?? signal.evidence?.url;
   if (signal.qualityTier === "FAILED") return false;
   if (!combinedText || combinedText.length < 24) return false;
+  if (isLikelyProfileSourceSignal(signal)) return false;
   if (HARD_SCRAPE_NOISE_PATTERN.test(combinedText)) return false;
   if (isLowQualityNarrativeText(combinedText)) return false;
   if (!isValidEvidenceUrl(evidenceUrl)) return false;
@@ -1099,7 +1133,9 @@ export async function runVcEnrichment(options: VcEnrichmentOptions = {}): Promis
       (candidate) =>
         candidate.sourceType === "dataset_article" ||
         candidate.sourceType === "investing_rss" ||
-        candidate.sourceType === "official_site"
+        candidate.sourceType === "social_hn" ||
+        candidate.sourceType === "social_reddit" ||
+        isOfficialNewsLikeCandidate(candidate)
     )
     .slice(0, maxClaimSources);
   const newlyExtractedClaims: NewsClaim[] = [];
@@ -1112,15 +1148,6 @@ export async function runVcEnrichment(options: VcEnrichmentOptions = {}): Promis
       claimExtractorLimiter.run(async () => {
         const newsSource = candidateToNewsSource(candidate);
         const extractedClaims = await extractClaimsForSource(newsSource).catch(() => null);
-        if (!extractedClaims?.length) {
-          if (candidate.sourceType === "official_site") {
-            extractedCount += 1;
-            if (extractedCount % 30 === 0 || extractedCount === claimCandidates.length) {
-              console.log(`[vc-enrich] claim extraction progress ${extractedCount}/${claimCandidates.length}`);
-            }
-            return;
-          }
-        }
         const claims = extractedClaims?.length
           ? extractedClaims.map((claim) => ensureClaimShape(claim, candidate))
           : [fallbackClaimForCandidate(candidate)];

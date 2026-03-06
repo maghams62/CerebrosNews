@@ -43,7 +43,7 @@ export function SignalBriefCard({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="text-[11px] font-semibold tracking-[0.08em] text-slate-500 uppercase">#{item.rank} Signal</div>
-            <h3 className="mt-1 line-clamp-1 text-sm font-semibold text-slate-900">{item.title}</h3>
+            <h3 className="mt-1 line-clamp-1 break-words text-sm font-semibold text-slate-900">{item.title}</h3>
           </div>
           <span className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold ${confidenceTone(item.confidence)}`}>
             {item.confidence}
