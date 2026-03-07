@@ -84,6 +84,7 @@ const RELATION_AUGMENT_PRESETS: GraphAnalyzerPresetId[] = [
   "THEME_MAP",
   "SIGNAL_DIFFUSION",
 ];
+const FOCUSABLE_NODE_TYPES: GraphAnalyzerNodeType[] = ["fund", "company"];
 
 function defaultEnabledTypes(presetId: GraphAnalyzerPresetId): Record<GraphAnalyzerNodeType, boolean> {
   const preset = getPresetById(presetId);
@@ -104,6 +105,10 @@ function formatNodeType(type: GraphAnalyzerNodeType): string {
   if (type === "source") return "Sources";
   if (type === "signal") return "Signals";
   return "Themes";
+}
+
+function isFocusableNodeType(type: GraphAnalyzerNodeType): boolean {
+  return FOCUSABLE_NODE_TYPES.includes(type);
 }
 
 function formatIntent(intent: NonNullable<GraphAnalyzerQueryResult["explain"]>["intent"]): string {
@@ -873,7 +878,10 @@ export function GraphAnalyzerPage({
     void executeQuery(query);
   }, [executeQuery, query]);
 
-  const focusCandidates = useMemo(() => focusOptions(edgeTypeSourceGraph), [edgeTypeSourceGraph]);
+  const focusCandidates = useMemo(
+    () => focusOptions(edgeTypeSourceGraph).filter((option) => isFocusableNodeType(option.type)),
+    [edgeTypeSourceGraph]
+  );
   const sectors = useMemo(() => availableSectors(funds), [funds]);
   const stages = useMemo(() => availableStages(funds), [funds]);
   const availableEntityTypes = useMemo(() => {
