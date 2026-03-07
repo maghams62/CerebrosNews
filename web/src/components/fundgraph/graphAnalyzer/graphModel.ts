@@ -2312,16 +2312,43 @@ export function buildQueryResultSubgraph(
   if (!highlightedNodeIds.size && !highlightedEdgeIds.size) return null;
 
   if (queryResult.strictNodeOnly) {
-    const nodes = source.nodes.filter((node) => highlightedNodeIds.has(node.id));
-    const nodeIdSet = new Set(nodes.map((node) => node.id));
+    const nodeById = new Map(source.nodes.map((node) => [node.id, node]));
+    const keptNodeIds = new Set(source.nodes.filter((node) => highlightedNodeIds.has(node.id)).map((node) => node.id));
+    const initialNodeIdSet = new Set(keptNodeIds);
     const edges = source.edges.filter((edge) => {
-      if (!nodeIdSet.has(edge.source) || !nodeIdSet.has(edge.target)) return false;
+      if (!initialNodeIdSet.has(edge.source) || !initialNodeIdSet.has(edge.target)) return false;
       if (!highlightedEdgeIds.size) return true;
       return highlightedEdgeIds.has(edge.id);
     });
+
+    const keptEdgeIds = new Set(edges.map((edge) => edge.id));
+    const expandedEdges = [...edges];
+
+    // Preserve founder visibility for highlighted companies in strict query mode.
+    for (const edge of source.edges) {
+      if (edge.type !== FOUNDED) continue;
+      const left = nodeById.get(edge.source);
+      const right = nodeById.get(edge.target);
+      if (!left || !right) continue;
+      if (left.type !== "person" && right.type !== "person") continue;
+      if (left.type !== "company" && right.type !== "company") continue;
+
+      const companyId = left.type === "company" ? left.id : right.id;
+      const personId = left.type === "person" ? left.id : right.id;
+      if (!keptNodeIds.has(companyId)) continue;
+
+      keptNodeIds.add(personId);
+      if (!keptEdgeIds.has(edge.id)) {
+        expandedEdges.push(edge);
+        keptEdgeIds.add(edge.id);
+      }
+    }
+
+    const nodes = source.nodes.filter((node) => keptNodeIds.has(node.id));
+    const nodeIdSet = new Set(nodes.map((node) => node.id));
     return {
       nodes,
-      edges,
+      edges: expandedEdges.filter((edge) => nodeIdSet.has(edge.source) && nodeIdSet.has(edge.target)),
     };
   }
 
