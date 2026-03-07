@@ -5,7 +5,7 @@ import { GraphCanvas } from "@/components/fundgraph/graphAnalyzer/GraphCanvas";
 import { GraphDetailsPanel } from "./GraphDetailsPanel";
 import { GraphPresetsPanel } from "@/components/fundgraph/graphAnalyzer/GraphPresetsPanel";
 import { GraphQueryBar } from "@/components/fundgraph/graphAnalyzer/GraphQueryBar";
-import { DEFAULT_ENTITY_TYPE_ENABLED, getPresetById } from "@/components/fundgraph/graphAnalyzer/presets";
+import { DEFAULT_ENTITY_TYPE_ENABLED, GRAPH_ANALYZER_PRESETS, getPresetById } from "@/components/fundgraph/graphAnalyzer/presets";
 import {
   applyGraphFilters,
   availableSectors,
@@ -77,6 +77,13 @@ const MIN_CITATION_OPTIONS = [
   { value: 2, label: "2+ citations" },
   { value: 3, label: "3+ citations" },
 ] as const;
+
+const RELATION_AUGMENT_PRESETS: GraphAnalyzerPresetId[] = [
+  "CO_INVESTMENT",
+  "FOUNDER_NETWORK",
+  "THEME_MAP",
+  "SIGNAL_DIFFUSION",
+];
 
 function defaultEnabledTypes(presetId: GraphAnalyzerPresetId): Record<GraphAnalyzerNodeType, boolean> {
   const preset = getPresetById(presetId);
@@ -152,6 +159,35 @@ function mergeGraphData(primary: GraphAnalyzerData, secondary: GraphAnalyzerData
     nodes: Array.from(nodeById.values()),
     edges: Array.from(edgeById.values()),
   };
+}
+
+function relationPresetIdsForEdgeType(
+  edgeType: "ALL" | GraphAnalyzerEdgeType,
+  activePresetId: GraphAnalyzerPresetId
+): GraphAnalyzerPresetId[] {
+  if (edgeType === "ALL") return [];
+  return RELATION_AUGMENT_PRESETS.filter((presetId) => {
+    if (presetId === activePresetId) return false;
+    const preset = GRAPH_ANALYZER_PRESETS.find((entry) => entry.id === presetId);
+    return Boolean(preset?.edgeTypes.includes(edgeType));
+  });
+}
+
+function requiredNodeTypesForEdgeType(
+  graph: GraphAnalyzerData,
+  edgeType: "ALL" | GraphAnalyzerEdgeType
+): GraphAnalyzerNodeType[] {
+  if (edgeType === "ALL") return [];
+  const typeById = new Map(graph.nodes.map((node) => [node.id, node.type]));
+  const required = new Set<GraphAnalyzerNodeType>();
+  for (const edge of graph.edges) {
+    if (edge.type !== edgeType) continue;
+    const leftType = typeById.get(edge.source);
+    const rightType = typeById.get(edge.target);
+    if (leftType) required.add(leftType);
+    if (rightType) required.add(rightType);
+  }
+  return Array.from(required);
 }
 
 function bestDefaultFocus(graph: GraphAnalyzerData, type: GraphAnalyzerNodeType): string {
@@ -465,6 +501,58 @@ export function GraphAnalyzerPage({
     });
   }, [activePreset, contextGraph, funds, leftOverlapFundId, rightOverlapFundId, signals]);
 
+  const founderGraph = useMemo(
+    () =>
+      buildPresetGraph({
+        presetId: "FOUNDER_NETWORK",
+        funds,
+        signals,
+        contextGraph,
+        overlapConfig: {
+          leftFundId: "",
+          rightFundId: "",
+        },
+      }),
+    [contextGraph, funds, signals]
+  );
+
+  const edgeTypeSourceGraph = useMemo(() => {
+    if (!activePreset) return EMPTY_GRAPH;
+    if (edgeTypeFilter === "ALL") return baseGraph;
+
+    const presetIds = relationPresetIdsForEdgeType(edgeTypeFilter, activePreset.id);
+    if (!presetIds.length) return baseGraph;
+
+    let merged = baseGraph;
+    for (const augmentPresetId of presetIds) {
+      const augmentGraph = buildPresetGraph({
+        presetId: augmentPresetId,
+        funds,
+        signals,
+        contextGraph,
+        overlapConfig: {
+          leftFundId: leftOverlapFundId,
+          rightFundId: rightOverlapFundId,
+        },
+      });
+      merged = mergeGraphData(merged, augmentGraph);
+    }
+    return merged;
+  }, [activePreset, baseGraph, contextGraph, edgeTypeFilter, funds, leftOverlapFundId, rightOverlapFundId, signals]);
+
+  const requiredEdgeNodeTypes = useMemo(
+    () => requiredNodeTypesForEdgeType(edgeTypeSourceGraph, edgeTypeFilter),
+    [edgeTypeFilter, edgeTypeSourceGraph]
+  );
+
+  const effectiveEntityTypeEnabled = useMemo(() => {
+    const next = { ...entityTypeEnabled };
+    for (const nodeType of requiredEdgeNodeTypes) {
+      next[nodeType] = true;
+    }
+    return next;
+  }, [entityTypeEnabled, requiredEdgeNodeTypes]);
+
   useEffect(() => {
     if (!activePreset) return;
     if (!baseGraph.nodes.length) return;
@@ -478,7 +566,7 @@ export function GraphAnalyzerPage({
 
   const filteredGraph = useMemo(() => {
     if (!activePreset) return EMPTY_GRAPH;
-    return applyGraphFilters(baseGraph, {
+    return applyGraphFilters(edgeTypeSourceGraph, {
       timeline,
       hopDepth,
       verifiedOnly,
@@ -486,14 +574,14 @@ export function GraphAnalyzerPage({
       stage,
       edgeType: edgeTypeFilter,
       minCitationCount,
-      entityTypeEnabled,
+      entityTypeEnabled: effectiveEntityTypeEnabled,
       focusNodeId,
     });
   }, [
     activePreset,
-    baseGraph,
+    edgeTypeSourceGraph,
     edgeTypeFilter,
-    entityTypeEnabled,
+    effectiveEntityTypeEnabled,
     focusNodeId,
     hopDepth,
     minCitationCount,
@@ -506,13 +594,13 @@ export function GraphAnalyzerPage({
   const queryGraph = useMemo(() => {
     if (!activePreset) return EMPTY_GRAPH;
     const queryEntityTypes = {
-      ...entityTypeEnabled,
+      ...effectiveEntityTypeEnabled,
     };
     queryEntityTypes.fund = true;
     queryEntityTypes.company = true;
     queryEntityTypes.person = true;
 
-    const primaryQueryGraph = applyGraphFilters(baseGraph, {
+    const primaryQueryGraph = applyGraphFilters(edgeTypeSourceGraph, {
       timeline,
       hopDepth,
       verifiedOnly,
@@ -524,16 +612,6 @@ export function GraphAnalyzerPage({
       focusNodeId: "",
     });
 
-    const founderGraph = buildPresetGraph({
-      presetId: "FOUNDER_NETWORK",
-      funds,
-      signals,
-      contextGraph,
-      overlapConfig: {
-        leftFundId: "",
-        rightFundId: "",
-      },
-    });
     const founderQueryGraph = applyGraphFilters(founderGraph, {
       timeline,
       hopDepth,
@@ -549,15 +627,13 @@ export function GraphAnalyzerPage({
     return mergeGraphData(primaryQueryGraph, founderQueryGraph);
   }, [
     activePreset,
-    baseGraph,
-    contextGraph,
+    edgeTypeSourceGraph,
     edgeTypeFilter,
-    entityTypeEnabled,
-    funds,
+    effectiveEntityTypeEnabled,
+    founderGraph,
     hopDepth,
     minCitationCount,
     sector,
-    signals,
     stage,
     timeline,
     verifiedOnly,
@@ -796,13 +872,17 @@ export function GraphAnalyzerPage({
     void executeQuery(query);
   }, [executeQuery, query]);
 
-  const focusCandidates = useMemo(() => focusOptions(baseGraph), [baseGraph]);
+  const focusCandidates = useMemo(
+    () => focusOptions(edgeTypeFilter === "ALL" ? baseGraph : edgeTypeSourceGraph),
+    [baseGraph, edgeTypeFilter, edgeTypeSourceGraph]
+  );
   const sectors = useMemo(() => availableSectors(funds), [funds]);
   const stages = useMemo(() => availableStages(funds), [funds]);
   const availableEntityTypes = useMemo(() => {
-    const available = new Set(baseGraph.nodes.map((node) => node.type));
-    return (Object.keys(entityTypeEnabled) as GraphAnalyzerNodeType[]).filter((type) => available.has(type));
-  }, [baseGraph.nodes, entityTypeEnabled]);
+    const sourceGraph = edgeTypeFilter === "ALL" ? baseGraph : edgeTypeSourceGraph;
+    const available = new Set(sourceGraph.nodes.map((node) => node.type));
+    return (Object.keys(effectiveEntityTypeEnabled) as GraphAnalyzerNodeType[]).filter((type) => available.has(type));
+  }, [baseGraph, edgeTypeFilter, edgeTypeSourceGraph, effectiveEntityTypeEnabled]);
 
   const highlightedNodeIds = useMemo(() => queryResult?.highlightedNodeIds ?? [], [queryResult]);
   const highlightedEdgeIds = useMemo(() => queryResult?.highlightedEdgeIds ?? [], [queryResult]);
@@ -1223,7 +1303,7 @@ export function GraphAnalyzerPage({
                   type="button"
                   onClick={() => setEntityTypeEnabled((prev) => ({ ...prev, [type]: !prev[type] }))}
                   className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
-                    entityTypeEnabled[type]
+                    effectiveEntityTypeEnabled[type]
                       ? "border-slate-900 bg-slate-900 text-white"
                       : "border-slate-200 bg-slate-50 text-slate-700"
                   }`}

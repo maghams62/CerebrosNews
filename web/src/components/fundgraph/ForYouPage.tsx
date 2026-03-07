@@ -980,18 +980,18 @@ export function ForYouPage({
       <SignalMomentumGraph items={momentumThemes} windowLabel={WINDOW_LABELS[selectedWindow]} />
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <EmergingOpportunitiesPanel items={emergingOpportunities} />
-        <ThemeDriversPanel items={themeDrivers} />
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        <TodaysSignalsPanel items={todaysSignals.slice(0, 5)} referenceNowMs={referenceNowMs} />
-        <ClaimsDebatePanel items={claimsDebate} referenceNowMs={referenceNowMs} />
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-2">
         <TrendingFundsPanel items={trendingFunds} />
+        <TodaysSignalsPanel items={todaysSignals.slice(0, 5)} referenceNowMs={referenceNowMs} />
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <ClaimsDebatePanel items={claimsDebate} referenceNowMs={referenceNowMs} />
+        <EmergingOpportunitiesPanel items={emergingOpportunities} />
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-2">
         <GraphEventsPanel items={graphEvents} />
+        <ThemeDriversPanel items={themeDrivers} />
       </div>
 
       <GraphQuerySnapshotsPanel items={graphQuerySnapshots} />

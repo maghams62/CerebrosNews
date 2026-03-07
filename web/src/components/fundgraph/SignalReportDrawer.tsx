@@ -24,6 +24,7 @@ import { dominantStance, signalStanceCounts } from "@/components/fundgraph/senti
 import { relativeTimeFromIso } from "@/components/fundgraph/utils";
 import { useFundGraphState } from "@/fundgraph/state";
 import { fieldLikeBullets, normalizeFundgraphText } from "@/lib/fundgraph/textNormalization";
+import { SIGNAL_UNLOCK_COST } from "@/lib/fundgraph/signalPaywall";
 import {
   AdvancedSignalInsight,
   EvidenceConfidenceTier,
@@ -510,6 +511,10 @@ export function SignalReportDrawer({
   }
 
   async function unlockAndRevealDeepAnalysis() {
+    if (typeof window !== "undefined") {
+      const confirmed = window.confirm(`Spend ${SIGNAL_UNLOCK_COST} credits to unlock deep signal analysis?`);
+      if (!confirmed) return;
+    }
     setAutoRevealAfterUnlock(true);
     await unlockSignal(workingSignal.id);
   }

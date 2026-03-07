@@ -98,6 +98,13 @@ function confidenceTone(confidence: GraphAnswerConfidence): string {
   return "border-rose-300 bg-rose-50 text-rose-800";
 }
 
+function normalizeNextActionQuery(action: string): string {
+  return action
+    .trim()
+    .replace(/^[-*]\s+/, "")
+    .replace(/^\d+[\.\)]\s+/, "");
+}
+
 export function GraphDetailsPanel({
   graph,
   presetId,
@@ -358,7 +365,18 @@ export function GraphDetailsPanel({
         {nextActions.length ? (
           <ul className="mt-2 space-y-1 text-xs text-slate-700">
             {nextActions.map((item) => (
-              <li key={item}>- {item}</li>
+              <li key={item} className="flex items-start justify-between gap-2 rounded-lg border border-slate-200 bg-white px-2 py-1.5">
+                <span className="pr-2">- {item}</span>
+                {onRunFollowUpQuery ? (
+                  <button
+                    type="button"
+                    onClick={() => onRunFollowUpQuery(normalizeNextActionQuery(item))}
+                    className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-700 hover:bg-slate-100"
+                  >
+                    Run
+                  </button>
+                ) : null}
+              </li>
             ))}
           </ul>
         ) : (
