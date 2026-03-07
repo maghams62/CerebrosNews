@@ -85,6 +85,12 @@ const RELATION_AUGMENT_PRESETS: GraphAnalyzerPresetId[] = [
   "SIGNAL_DIFFUSION",
 ];
 const FOCUSABLE_NODE_TYPES: GraphAnalyzerNodeType[] = ["fund", "company"];
+const QUERY_NEUTRAL_FILTERS = {
+  sector: "ALL",
+  stage: "ALL",
+  edgeType: "ALL" as const,
+  minCitationCount: 0,
+};
 
 function defaultEnabledTypes(presetId: GraphAnalyzerPresetId): Record<GraphAnalyzerNodeType, boolean> {
   const preset = getPresetById(presetId);
@@ -743,6 +749,46 @@ export function GraphAnalyzerPage({
   const demoExamples = exampleLibrary.chipExamples;
   const llmExamples = exampleLibrary.llmExamples;
 
+  const resetFiltersForQueryMode = useCallback(() => {
+    setFocusNodeId("");
+    setSector(QUERY_NEUTRAL_FILTERS.sector);
+    setStage(QUERY_NEUTRAL_FILTERS.stage);
+    setEdgeTypeFilter(QUERY_NEUTRAL_FILTERS.edgeType);
+    setMinCitationCount(QUERY_NEUTRAL_FILTERS.minCitationCount);
+    setVerifiedOnly(false);
+    setEntityTypeEnabled(defaultEnabledTypes(presetId));
+    setDisplayMode("overview");
+  }, [presetId]);
+
+  const activateFilterMode = useCallback(
+    (nextFocusNodeId?: string) => {
+      setQuery("");
+      setQueryResult(null);
+      setSelectedEdgeId("");
+      setHoveredEdgeId("");
+
+      const resolvedFocusNodeId = typeof nextFocusNodeId === "string" ? nextFocusNodeId : focusNodeId;
+      if (resolvedFocusNodeId) {
+        setSelectedNodeId(resolvedFocusNodeId);
+        setDisplayMode("focus");
+      } else {
+        setSelectedNodeId("");
+        setDisplayMode("overview");
+      }
+    },
+    [focusNodeId]
+  );
+
+  const handleQueryInputChange = useCallback(
+    (value: string) => {
+      setQuery(value);
+      if (value.trim()) {
+        resetFiltersForQueryMode();
+      }
+    },
+    [resetFiltersForQueryMode]
+  );
+
   const executeQuery = useCallback(async (rawQuery: string) => {
     const requestSeq = queryRequestSeqRef.current + 1;
     queryRequestSeqRef.current = requestSeq;
@@ -759,8 +805,8 @@ export function GraphAnalyzerPage({
       return;
     }
 
-    // Query results override manual focus selection.
-    setFocusNodeId("");
+    // Query mode and filter mode are mutually exclusive.
+    resetFiltersForQueryMode();
 
     const directResult = runGraphQuery(trimmed, queryGraph);
     const directHasHighlight = directResult.highlightedNodeIds.length > 0 || directResult.highlightedEdgeIds.length > 0;
@@ -824,7 +870,7 @@ export function GraphAnalyzerPage({
     if (result.steps.length > hopDepth) {
       setHopDepth(Math.min(limits.graphDepth, result.steps.length));
     }
-  }, [hopDepth, limits.graphDepth, llmExamples, presetId, queryGraph]);
+  }, [hopDepth, limits.graphDepth, llmExamples, presetId, queryGraph, resetFiltersForQueryMode]);
 
   useEffect(() => {
     if (bootstrappedQueryRef.current) return;
@@ -1046,15 +1092,21 @@ export function GraphAnalyzerPage({
 
       <GraphPresetsPanel
         selectedPresetId={presetId}
-        onSelectPreset={setPresetId}
+        onSelectPreset={(nextPresetId) => {
+          setPresetId(nextPresetId);
+          activateFilterMode();
+        }}
         timeline={timeline}
-        onTimelineChange={setTimeline}
+        onTimelineChange={(nextTimeline) => {
+          setTimeline(nextTimeline);
+          activateFilterMode();
+        }}
       />
 
       <>
           <GraphQueryBar
             value={query}
-            onChange={setQuery}
+            onChange={handleQueryInputChange}
             onRun={runQuery}
             examples={demoExamples}
             onUseExample={(value) => {
@@ -1104,15 +1156,9 @@ export function GraphAnalyzerPage({
                   onChange={(event) => {
                     const nextFocusId = event.target.value;
                     setFocusNodeId(nextFocusId);
+                    activateFilterMode(nextFocusId);
                     setSelectedEdgeId("");
                     setHoveredEdgeId("");
-
-                    // If no query is active, treat focus as a neighborhood view trigger.
-                    if (!query.trim()) {
-                      setQueryResult(null);
-                      setSelectedNodeId(nextFocusId);
-                      setDisplayMode(nextFocusId ? "focus" : "overview");
-                    }
                   }}
                   className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none"
                 >
@@ -1129,7 +1175,10 @@ export function GraphAnalyzerPage({
                 <span className="text-[11px] font-semibold tracking-[0.08em] text-slate-500 uppercase">Sector</span>
                 <select
                   value={sector}
-                  onChange={(event) => setSector(event.target.value)}
+                  onChange={(event) => {
+                    setSector(event.target.value);
+                    activateFilterMode();
+                  }}
                   className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none"
                 >
                   <option value="ALL">All sectors</option>
@@ -1145,7 +1194,10 @@ export function GraphAnalyzerPage({
                 <span className="text-[11px] font-semibold tracking-[0.08em] text-slate-500 uppercase">Stage</span>
                 <select
                   value={stage}
-                  onChange={(event) => setStage(event.target.value)}
+                  onChange={(event) => {
+                    setStage(event.target.value);
+                    activateFilterMode();
+                  }}
                   className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none"
                 >
                   <option value="ALL">All stages</option>
@@ -1161,7 +1213,10 @@ export function GraphAnalyzerPage({
                 <span className="text-[11px] font-semibold tracking-[0.08em] text-slate-500 uppercase">Relationship</span>
                 <select
                   value={edgeTypeFilter}
-                  onChange={(event) => setEdgeTypeFilter(event.target.value as "ALL" | GraphAnalyzerEdgeType)}
+                  onChange={(event) => {
+                    setEdgeTypeFilter(event.target.value as "ALL" | GraphAnalyzerEdgeType);
+                    activateFilterMode();
+                  }}
                   className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none"
                 >
                   {EDGE_TYPE_OPTIONS.map((option) => (
@@ -1176,7 +1231,10 @@ export function GraphAnalyzerPage({
                 <span className="text-[11px] font-semibold tracking-[0.08em] text-slate-500 uppercase">Hop Depth</span>
                 <select
                   value={hopDepth}
-                  onChange={(event) => setHopDepth(Math.max(1, Math.min(limits.graphDepth, Number(event.target.value))))}
+                  onChange={(event) => {
+                    setHopDepth(Math.max(1, Math.min(limits.graphDepth, Number(event.target.value))));
+                    activateFilterMode();
+                  }}
                   className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none"
                 >
                   {Array.from({ length: limits.graphDepth }, (_, idx) => idx + 1).map((depthValue) => (
@@ -1191,7 +1249,10 @@ export function GraphAnalyzerPage({
                 <span className="text-[11px] font-semibold tracking-[0.08em] text-slate-500 uppercase">Min citations</span>
                 <select
                   value={minCitationCount}
-                  onChange={(event) => setMinCitationCount(Math.max(0, Number(event.target.value) || 0))}
+                  onChange={(event) => {
+                    setMinCitationCount(Math.max(0, Number(event.target.value) || 0));
+                    activateFilterMode();
+                  }}
                   className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none"
                 >
                   {MIN_CITATION_OPTIONS.map((option) => (
@@ -1204,7 +1265,10 @@ export function GraphAnalyzerPage({
 
               <button
                 type="button"
-                onClick={() => setVerifiedOnly((prev) => !prev)}
+                onClick={() => {
+                  setVerifiedOnly((prev) => !prev);
+                  activateFilterMode();
+                }}
                 className={`h-9 rounded-xl border px-3 text-xs font-semibold uppercase ${
                   verifiedOnly ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-700"
                 }`}
@@ -1292,7 +1356,10 @@ export function GraphAnalyzerPage({
                   <span className="text-[11px] font-semibold tracking-[0.08em] text-slate-500 uppercase">Fund A</span>
                   <select
                     value={leftOverlapFundId}
-                    onChange={(event) => setLeftOverlapFundId(event.target.value)}
+                    onChange={(event) => {
+                      setLeftOverlapFundId(event.target.value);
+                      activateFilterMode();
+                    }}
                     className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none"
                   >
                     {funds.map((fund) => (
@@ -1306,7 +1373,10 @@ export function GraphAnalyzerPage({
                   <span className="text-[11px] font-semibold tracking-[0.08em] text-slate-500 uppercase">Fund B</span>
                   <select
                     value={rightOverlapFundId}
-                    onChange={(event) => setRightOverlapFundId(event.target.value)}
+                    onChange={(event) => {
+                      setRightOverlapFundId(event.target.value);
+                      activateFilterMode();
+                    }}
                     className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none"
                   >
                     {funds.map((fund) => (
@@ -1324,7 +1394,10 @@ export function GraphAnalyzerPage({
                 <button
                   key={type}
                   type="button"
-                  onClick={() => setEntityTypeEnabled((prev) => ({ ...prev, [type]: !prev[type] }))}
+                  onClick={() => {
+                    setEntityTypeEnabled((prev) => ({ ...prev, [type]: !prev[type] }));
+                    activateFilterMode();
+                  }}
                   className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
                     effectiveEntityTypeEnabled[type]
                       ? "border-slate-900 bg-slate-900 text-white"
