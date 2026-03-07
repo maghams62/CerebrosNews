@@ -165,7 +165,9 @@ function relationPresetIdsForEdgeType(
   edgeType: "ALL" | GraphAnalyzerEdgeType,
   activePresetId: GraphAnalyzerPresetId
 ): GraphAnalyzerPresetId[] {
-  if (edgeType === "ALL") return [];
+  if (edgeType === "ALL") {
+    return RELATION_AUGMENT_PRESETS.filter((presetId) => presetId !== activePresetId);
+  }
   return RELATION_AUGMENT_PRESETS.filter((presetId) => {
     if (presetId === activePresetId) return false;
     const preset = GRAPH_ANALYZER_PRESETS.find((entry) => entry.id === presetId);
@@ -518,8 +520,6 @@ export function GraphAnalyzerPage({
 
   const edgeTypeSourceGraph = useMemo(() => {
     if (!activePreset) return EMPTY_GRAPH;
-    if (edgeTypeFilter === "ALL") return baseGraph;
-
     const presetIds = relationPresetIdsForEdgeType(edgeTypeFilter, activePreset.id);
     if (!presetIds.length) return baseGraph;
 
@@ -566,9 +566,10 @@ export function GraphAnalyzerPage({
 
   const filteredGraph = useMemo(() => {
     if (!activePreset) return EMPTY_GRAPH;
+    const effectiveHopDepth = edgeTypeFilter === "ALL" && focusNodeId ? 1 : hopDepth;
     return applyGraphFilters(edgeTypeSourceGraph, {
       timeline,
-      hopDepth,
+      hopDepth: effectiveHopDepth,
       verifiedOnly,
       sector,
       stage,
@@ -872,17 +873,13 @@ export function GraphAnalyzerPage({
     void executeQuery(query);
   }, [executeQuery, query]);
 
-  const focusCandidates = useMemo(
-    () => focusOptions(edgeTypeFilter === "ALL" ? baseGraph : edgeTypeSourceGraph),
-    [baseGraph, edgeTypeFilter, edgeTypeSourceGraph]
-  );
+  const focusCandidates = useMemo(() => focusOptions(edgeTypeSourceGraph), [edgeTypeSourceGraph]);
   const sectors = useMemo(() => availableSectors(funds), [funds]);
   const stages = useMemo(() => availableStages(funds), [funds]);
   const availableEntityTypes = useMemo(() => {
-    const sourceGraph = edgeTypeFilter === "ALL" ? baseGraph : edgeTypeSourceGraph;
-    const available = new Set(sourceGraph.nodes.map((node) => node.type));
+    const available = new Set(edgeTypeSourceGraph.nodes.map((node) => node.type));
     return (Object.keys(effectiveEntityTypeEnabled) as GraphAnalyzerNodeType[]).filter((type) => available.has(type));
-  }, [baseGraph, edgeTypeFilter, edgeTypeSourceGraph, effectiveEntityTypeEnabled]);
+  }, [edgeTypeSourceGraph, effectiveEntityTypeEnabled]);
 
   const highlightedNodeIds = useMemo(() => queryResult?.highlightedNodeIds ?? [], [queryResult]);
   const highlightedEdgeIds = useMemo(() => queryResult?.highlightedEdgeIds ?? [], [queryResult]);

@@ -3068,6 +3068,40 @@ function runGenericSearch(query: string, graph: GraphAnalyzerData, phrase: strin
     }
   }
 
+  const topEntry = scoredMatches[0];
+  const runnerUpEntry = scoredMatches[1];
+  if (topEntry) {
+    const topNode = topEntry.node;
+    const topLabel = normalizeToken(topNode.label);
+    const highConfidenceTopMatch =
+      topLabel === normalizedPhrase ||
+      matches.length === 1 ||
+      !runnerUpEntry ||
+      topEntry.score >= runnerUpEntry.score + 25;
+
+    if (highConfidenceTopMatch) {
+      const adjacency = buildAdjacency(graph.edges);
+      const oneHopNodeIds = collectHopNeighborhood(adjacency, [topNode.id], 1);
+      const oneHopEdges = collectIncidentEdges(graph, new Set([topNode.id])).filter(
+        (edge) => oneHopNodeIds.has(edge.source) && oneHopNodeIds.has(edge.target)
+      );
+
+      return {
+        query,
+        summary: `Showing 1-hop relationships connected to ${topNode.label}.`,
+        highlightedNodeIds: Array.from(oneHopNodeIds),
+        highlightedEdgeIds: oneHopEdges.map((edge) => edge.id),
+        steps: [],
+        focusNodeId: topNode.id,
+        strictNodeOnly: true,
+        explain: {
+          intent: "search",
+          entities: [topNode.label],
+        },
+      };
+    }
+  }
+
   const highlightedNodes = new Set(matches.map((node) => node.id));
   const edges = collectIncidentEdges(graph, highlightedNodes);
 
