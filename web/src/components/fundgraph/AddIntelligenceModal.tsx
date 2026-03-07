@@ -98,6 +98,8 @@ export function AddIntelligenceModal({
       setEvidenceUrl("");
       setEvidenceSnippet("");
       setConfidence(72);
+      onClose();
+      router.push(`/cerebrosfund/signals?signalId=${encodeURIComponent(response.signal.id)}`);
       router.refresh();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to publish signal.";

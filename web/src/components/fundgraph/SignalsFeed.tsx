@@ -176,10 +176,10 @@ export function SignalsFeed({
   const visibleSignals = useMemo(() => {
     const base = orderedSignals.slice(0, MAX_SIGNAL_CARDS);
     if (!autoOpenSignalId || base.some((signal) => signal.id === autoOpenSignalId)) return base;
-    const autoOpenSignal = orderedSignals.find((signal) => signal.id === autoOpenSignalId);
+    const autoOpenSignal = signals.find((signal) => signal.id === autoOpenSignalId);
     if (!autoOpenSignal) return base;
     return [autoOpenSignal, ...base.filter((signal) => signal.id !== autoOpenSignalId)].slice(0, MAX_SIGNAL_CARDS);
-  }, [autoOpenSignalId, orderedSignals]);
+  }, [autoOpenSignalId, orderedSignals, signals]);
   const hiddenCount = Math.max(0, orderedSignals.length - visibleSignals.length);
 
   return (

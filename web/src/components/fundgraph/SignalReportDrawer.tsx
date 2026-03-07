@@ -20,6 +20,7 @@ import {
 } from "@/components/fundgraph/signalReportTypes";
 import { buildSignalReport } from "@/components/fundgraph/buildSignalReport";
 import { dominantStance, signalStanceCounts } from "@/components/fundgraph/sentimentInsights";
+import { relativeTimeFromIso } from "@/components/fundgraph/utils";
 import { useFundGraphState } from "@/fundgraph/state";
 import { fieldLikeBullets, normalizeFundgraphText } from "@/lib/fundgraph/textNormalization";
 import {
@@ -152,6 +153,7 @@ function synthesizeSignal(
       | "neutralCount"
       | "bearishCount"
       | "upvotes"
+      | "commentsCount"
       | "userStance"
     >
   >
@@ -169,6 +171,7 @@ function synthesizeSignal(
     neutralCount: update.neutralCount ?? prev.neutralCount ?? 0,
     bearishCount: update.bearishCount ?? prev.bearishCount ?? 0,
     upvotes: update.upvotes ?? update.bullishCount ?? prev.upvotes ?? prev.bullishCount ?? 0,
+    commentsCount: update.commentsCount ?? prev.commentsCount ?? 0,
   };
 }
 
@@ -188,6 +191,13 @@ function AdvancedInsightSkeleton() {
     </div>
   );
 }
+
+type LocalDiscussionComment = {
+  id: string;
+  author: string;
+  comment: string;
+  createdAt: string;
+};
 
 export function SignalReportDrawer({
   open,
@@ -227,6 +237,8 @@ export function SignalReportDrawer({
   const [advancedPollingTimedOut, setAdvancedPollingTimedOut] = useState(false);
   const [autoRevealAfterUnlock, setAutoRevealAfterUnlock] = useState(false);
   const [advancedInsightError, setAdvancedInsightError] = useState<string | null>(null);
+  const [discussionDraft, setDiscussionDraft] = useState("");
+  const [discussionItems, setDiscussionItems] = useState<LocalDiscussionComment[]>([]);
   const signalContextKey = `${signal.id}::${fundName ?? ""}`;
   const signalContextRef = useRef(signalContextKey);
   const autoOpenedCitationSignalRef = useRef<string | null>(null);
@@ -250,6 +262,8 @@ export function SignalReportDrawer({
       setAutoRevealAfterUnlock(false);
       setAdvancedInsightError(null);
       setAdvancedInsightLoading(false);
+      setDiscussionDraft("");
+      setDiscussionItems([]);
       return;
     }
 
@@ -631,6 +645,24 @@ export function SignalReportDrawer({
     }
   }
 
+  function submitDiscussionComment() {
+    const text = discussionDraft.trim();
+    if (text.length < 6) return;
+    const nextComment: LocalDiscussionComment = {
+      id: `signal-comment-${workingSignal.id}-${Date.now()}`,
+      author: (userName || "You").trim() || "You",
+      comment: text,
+      createdAt: new Date().toISOString(),
+    };
+    setDiscussionItems((prev) => [nextComment, ...prev]);
+    setDiscussionDraft("");
+    const nextSignal = synthesizeSignal(workingSignal, {
+      commentsCount: (workingSignal.commentsCount ?? 0) + 1,
+    });
+    setWorkingSignal(nextSignal);
+    emitSignalUpdated(nextSignal);
+  }
+
   return (
     <div className="fixed inset-0 z-[70]">
       <div className="absolute inset-0 bg-slate-950/45 backdrop-blur-[1px]" onClick={onClose} aria-hidden="true" />
@@ -720,6 +752,56 @@ export function SignalReportDrawer({
                   compact
                   onCitationClick={(citationId) => setFocusedEvidenceId(citationId)}
                 />
+              </div>
+            </section>
+
+            <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold text-slate-900">Community Discussion</h3>
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+                  {workingSignal.commentsCount ?? 0} comment{(workingSignal.commentsCount ?? 0) === 1 ? "" : "s"}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-slate-500">Add your perspective, diligence notes, or follow-up questions on this signal.</p>
+
+              <div className="mt-3 space-y-2">
+                {discussionItems.length ? (
+                  discussionItems.map((item) => (
+                    <article key={item.id} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold text-slate-800">{item.author}</span>
+                        <span className="text-[11px] text-slate-500">{relativeTimeFromIso(item.createdAt)}</span>
+                      </div>
+                      <p className="mt-1 text-sm text-slate-700">{item.comment}</p>
+                    </article>
+                  ))
+                ) : (
+                  <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-4 text-xs text-slate-600">
+                    No comments yet. Start the discussion for this signal.
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
+                <label className="text-xs font-semibold tracking-[0.08em] text-slate-500 uppercase">Add Comment</label>
+                <textarea
+                  value={discussionDraft}
+                  onChange={(event) => setDiscussionDraft(event.target.value)}
+                  rows={3}
+                  placeholder="Share what supports or challenges this signal..."
+                  className="mt-2 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400"
+                />
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <p className="text-[11px] text-slate-500">Discussion comments are session-local for now.</p>
+                  <button
+                    type="button"
+                    onClick={submitDiscussionComment}
+                    disabled={discussionDraft.trim().length < 6}
+                    className="h-8 rounded-full bg-slate-900 px-3 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                  >
+                    Post comment
+                  </button>
+                </div>
               </div>
             </section>
 
