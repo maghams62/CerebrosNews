@@ -819,9 +819,6 @@ export function GraphAnalyzerPage({
       setSelectedEdgeId(directResult.highlightedEdgeIds[0] ?? "");
       setHoveredEdgeId("");
       setDisplayMode(directResult.focusNodeId ? "focus" : "overview");
-      if (directResult.steps.length > hopDepth) {
-        setHopDepth(Math.min(limits.graphDepth, directResult.steps.length));
-      }
       return;
     }
 
@@ -867,9 +864,6 @@ export function GraphAnalyzerPage({
     setSelectedEdgeId(result.highlightedEdgeIds[0] ?? "");
     setHoveredEdgeId("");
     setDisplayMode(result.focusNodeId ? "focus" : "overview");
-    if (result.steps.length > hopDepth) {
-      setHopDepth(Math.min(limits.graphDepth, result.steps.length));
-    }
   }, [hopDepth, limits.graphDepth, llmExamples, presetId, queryGraph, resetFiltersForQueryMode]);
 
   useEffect(() => {
