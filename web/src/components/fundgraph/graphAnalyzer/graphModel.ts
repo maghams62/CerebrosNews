@@ -3477,9 +3477,21 @@ export function buildGraphDisplayResult(
   const highlightedNodeIds = new Set(options.highlightedNodeIds ?? []);
   const highlightedEdgeIds = new Set(options.highlightedEdgeIds ?? []);
   const requiredNodeIds = new Set<string>();
+  const selectedNode = options.selectedNodeId ? nodeById.get(options.selectedNodeId) : undefined;
 
-  if (options.selectedNodeId && nodeById.has(options.selectedNodeId)) {
-    requiredNodeIds.add(options.selectedNodeId);
+  if (selectedNode) {
+    requiredNodeIds.add(selectedNode.id);
+  }
+  if (selectedNode?.type === "company") {
+    for (const edge of graph.edges) {
+      if (edge.type !== FOUNDED) continue;
+      if (edge.source !== selectedNode.id && edge.target !== selectedNode.id) continue;
+      const personId = edge.source === selectedNode.id ? edge.target : edge.source;
+      const personNode = nodeById.get(personId);
+      if (personNode?.type !== "person") continue;
+      requiredNodeIds.add(personId);
+      highlightedEdgeIds.add(edge.id);
+    }
   }
   for (const nodeId of highlightedNodeIds) {
     if (nodeById.has(nodeId)) requiredNodeIds.add(nodeId);

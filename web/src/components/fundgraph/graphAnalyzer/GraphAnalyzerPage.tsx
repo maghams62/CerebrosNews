@@ -568,8 +568,17 @@ export function GraphAnalyzerPage({
     for (const nodeType of requiredEdgeNodeTypes) {
       next[nodeType] = true;
     }
+
+    // Always include founder/person nodes when a company is focused.
+    if (focusNodeId) {
+      const focusedNode = edgeTypeSourceGraph.nodes.find((node) => node.id === focusNodeId);
+      if (focusedNode?.type === "company") {
+        next.person = true;
+      }
+    }
+
     return next;
-  }, [entityTypeEnabled, requiredEdgeNodeTypes]);
+  }, [edgeTypeSourceGraph.nodes, entityTypeEnabled, focusNodeId, requiredEdgeNodeTypes]);
 
   useEffect(() => {
     if (!activePreset) return;

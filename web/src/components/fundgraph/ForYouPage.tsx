@@ -39,6 +39,62 @@ const WINDOW_LABELS: Record<ForYouWindow, string> = {
   "7d": "last 7 days",
 };
 
+const SIGNAL_ACTION_KEYWORDS = [
+  "invest",
+  "fund",
+  "raise",
+  "round",
+  "acquire",
+  "merger",
+  "partnership",
+  "launch",
+  "revenue",
+  "growth",
+  "hiring",
+  "product",
+  "platform",
+  "ai",
+] as const;
+
+const SIGNAL_NOISE_KEYWORDS = [
+  "speaker",
+  "event",
+  "scheduled",
+  "former",
+  "banker",
+  "chief security officer",
+  "bios",
+  "panel",
+  "webinar",
+] as const;
+
+const CLAIM_ACTION_KEYWORDS = [
+  "invest",
+  "fund",
+  "raise",
+  "acquire",
+  "launch",
+  "partnership",
+  "contract",
+  "revenue",
+  "growth",
+  "valuation",
+  "round",
+] as const;
+
+const CLAIM_NOISE_KEYWORDS = [
+  "speaker",
+  "scheduled",
+  "former",
+  "banker",
+  "chief security officer",
+  "panelist",
+  "webinar",
+  "fireside chat",
+] as const;
+
+const FOUNDER_CONTEXT_PATTERN = /\bfounder|co-founder|founded|ceo|cto|cso|chair|president\b/;
+
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
@@ -196,6 +252,112 @@ function sourceLabelForSignal(signal: Signal): string {
   if (host) return host;
   if (signal.source === "community") return "Inside community";
   return "Inside partners";
+}
+
+function sourceHostForSignal(signal: Signal): string {
+  return hostLabelFromUrl(signal.evidence?.url || signal.evidenceUrl);
+}
+
+function canonicalSignalHeadline(signal: Signal): string {
+  return normalizeText(signal.title.replace(/^[^:]+:\s*/, ""))
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function signalActionIntentScore(signal: Signal): number {
+  const text = normalizeText(`${signal.title} ${signal.summary} ${(signal.tags ?? []).join(" ")}`);
+  let score = 0;
+  for (const keyword of SIGNAL_ACTION_KEYWORDS) {
+    if (text.includes(keyword)) score += 1;
+  }
+  return score;
+}
+
+function signalNoisePenalty(signal: Signal): number {
+  const text = normalizeText(`${signal.title} ${signal.summary}`);
+  let penalty = 0;
+  for (const keyword of SIGNAL_NOISE_KEYWORDS) {
+    if (text.includes(keyword)) penalty += 1;
+  }
+  if (/\bis\s+(?:a|an|the)\b/.test(text)) penalty += 1;
+  if (text.includes("speaker") && text.includes("event")) penalty += 2;
+  return penalty;
+}
+
+function claimActionIntentScore(claimText: string): number {
+  let score = 0;
+  for (const keyword of CLAIM_ACTION_KEYWORDS) {
+    if (claimText.includes(keyword)) score += 1;
+  }
+  return score;
+}
+
+function claimNoisePenalty(claimText: string): number {
+  let penalty = 0;
+  for (const keyword of CLAIM_NOISE_KEYWORDS) {
+    if (claimText.includes(keyword)) penalty += 1;
+  }
+  if (/\bis\s+(?:a|an|the)\b/.test(claimText)) penalty += 1;
+  return penalty;
+}
+
+function graphFundQuery(fundName: string, text: string): string {
+  if (FOUNDER_CONTEXT_PATTERN.test(text)) {
+    return `founders ${fundName} invested in`;
+  }
+  return `companies ${fundName} invested in`;
+}
+
+function signalSourceCount(signal: Signal): number {
+  return (
+    1 +
+    Number(Boolean(signal.evidence?.url || signal.evidenceUrl)) +
+    Number(Boolean(signal.evidence?.snippet || signal.evidenceSnippet))
+  );
+}
+
+function signalQualityScore(signal: Signal): number {
+  if (signal.qualityTier === "FAILED") return -100;
+
+  const { verified, disputed } = countSignalVotes(signal);
+  const qualityTierBase = signal.qualityTier === "ALIGNED" ? 30 : 10;
+  const alignment = clamp(
+    typeof signal.alignmentScore === "number"
+      ? signal.alignmentScore
+      : typeof signal.citationMatchScore === "number"
+        ? signal.citationMatchScore
+        : signal.confidence,
+    0,
+    1
+  );
+  const qualityReasonPenalty = (signal.qualityReasons ?? []).reduce((total, reason) => {
+    if (reason === "claim_not_supported_by_article_text") return total + 12;
+    if (reason === "snippet_not_grounded") return total + 10;
+    return total + 4;
+  }, 0);
+  const actionBonus = signalActionIntentScore(signal) * 5;
+  const noisePenalty = signalNoisePenalty(signal) * 6;
+  const voteScore = Math.min(16, (verified + disputed) * 2) + Math.max(-6, verified - disputed);
+  const evidenceScore = signalSourceCount(signal) * 4;
+
+  return Math.round(
+    qualityTierBase + alignment * 34 + clamp(signal.confidence, 0, 1) * 22 + voteScore + evidenceScore + actionBonus - qualityReasonPenalty - noisePenalty
+  );
+}
+
+function signalQualityWeight(signal: Signal): number {
+  return clamp((signalQualityScore(signal) + 60) / 120, 0.08, 1.12);
+}
+
+function isSignalEligibleForForYou(signal: Signal): boolean {
+  if (signal.qualityTier === "FAILED") return false;
+  const quality = signalQualityScore(signal);
+  const actionIntent = signalActionIntentScore(signal);
+  const noise = signalNoisePenalty(signal);
+  if (quality < 12 && actionIntent === 0) return false;
+  if (noise >= 3 && actionIntent <= 1 && quality < 30) return false;
+  return true;
 }
 
 function offsetFromKey(key: string): number {
@@ -356,6 +518,31 @@ export function ForYouPage({
     [claims, currentStart, previousStart]
   );
 
+  const qualitySignalsByRecency = useMemo(
+    () => signalsByRecency.filter((signal) => isSignalEligibleForForYou(signal)),
+    [signalsByRecency]
+  );
+
+  const recentSignalsForPanels = useMemo(() => {
+    const scoped = recentSignals.filter((signal) => isSignalEligibleForForYou(signal));
+    if (scoped.length >= 18) return scoped;
+
+    const merged = [...scoped];
+    const seen = new Set(merged.map((signal) => signal.id));
+    for (const signal of qualitySignalsByRecency) {
+      if (seen.has(signal.id)) continue;
+      merged.push(signal);
+      if (merged.length >= 96) break;
+    }
+
+    return merged.length ? merged : recentSignals;
+  }, [qualitySignalsByRecency, recentSignals]);
+
+  const previousSignalsForThemes = useMemo(
+    () => previousSignals.filter((signal) => isSignalEligibleForForYou(signal)),
+    [previousSignals]
+  );
+
   const { momentumThemes, themeDrivers } = useMemo<{
     momentumThemes: SignalMomentumTheme[];
     themeDrivers: ThemeDriverRow[];
@@ -397,26 +584,27 @@ export function ForYouPage({
 
     const span = Math.max(1, now - currentStart);
 
-    for (const signal of recentSignals) {
+    for (const signal of recentSignalsForPanels) {
       const slug = themeSlugForSignal(signal);
       const bucket = ensureBucket(slug);
-      bucket.currentSignals += 1;
-      bucket.confidenceSum += signal.confidence;
-      bucket.confidenceWeight += 1;
-      if (signalIsContested(signal)) bucket.contestedCount += 1;
+      const signalWeight = signalQualityWeight(signal);
+      bucket.currentSignals += signalWeight;
+      bucket.confidenceSum += clamp(signal.confidence, 0, 1) * signalWeight;
+      bucket.confidenceWeight += signalWeight;
+      if (signalIsContested(signal)) bucket.contestedCount += Math.max(0.5, signalWeight * 0.8);
 
       const ts = +new Date(signal.createdAt);
       if (Number.isFinite(ts)) {
         const offset = clamp(ts - currentStart, 0, span - 1);
         const idx = Math.min(bins.length - 1, Math.floor((offset / span) * bins.length));
-        bucket.bins[idx] += 1;
+        bucket.bins[idx] += signalWeight;
       }
     }
 
-    for (const signal of previousSignals) {
+    for (const signal of previousSignalsForThemes) {
       const slug = themeSlugForSignal(signal);
       const bucket = ensureBucket(slug);
-      bucket.previousSignals += 1;
+      bucket.previousSignals += signalQualityWeight(signal);
     }
 
     for (const claim of recentClaims) {
@@ -435,19 +623,19 @@ export function ForYouPage({
     }
 
     const rows = Array.from(bucketBySlug.values()).map((bucket) => {
-      const supportCount = bucket.currentSignals + bucket.currentClaims;
-      const previousSupport = bucket.previousSignals + bucket.previousClaims;
-      const trendDelta = supportCount - previousSupport;
+      const supportCount = Math.max(0, Math.round(bucket.currentSignals + bucket.currentClaims));
+      const previousSupport = Math.max(0, Math.round(bucket.previousSignals + bucket.previousClaims));
+      const trendDelta = Math.round(supportCount - previousSupport);
       const confidence = bucket.confidenceWeight ? bucket.confidenceSum / bucket.confidenceWeight : 0.5;
-      const samples = bins.map((bin, idx) => ({ label: bin.label, value: bucket.bins[idx] ?? 0 }));
+      const samples = bins.map((bin, idx) => ({ label: bin.label, value: Math.max(0, Math.round(bucket.bins[idx] ?? 0)) }));
       const query = `funds investing in ${bucket.title}`;
       return {
         slug: bucket.slug,
         theme: bucket.title,
-        signalCount: bucket.currentSignals,
+        signalCount: Math.max(0, Math.round(bucket.currentSignals)),
         supportCount,
         trendDelta,
-        contestedCount: bucket.contestedCount,
+        contestedCount: Math.max(0, Math.round(bucket.contestedCount)),
         confidence,
         samples,
         href: themeHref(bucket.slug),
@@ -506,16 +694,25 @@ export function ForYouPage({
       momentumThemes: momentum,
       themeDrivers: drivers,
     };
-  }, [currentStart, now, previousClaims, previousSignals, recentClaims, recentSignals, selectedWindow]);
+  }, [currentStart, now, previousClaims, previousSignalsForThemes, recentClaims, recentSignalsForPanels, selectedWindow]);
 
   const todaysSignals = useMemo<TodaysSignalItem[]>(() => {
     const windowHours = windowMs / (1000 * 60 * 60);
-    const rows = recentSignals.map((signal) => {
+    type RankedSignalRow = TodaysSignalItem & {
+      _fundId: string;
+      _host: string;
+      _themeSlug: string;
+      _headlineKey: string;
+      _rank: number;
+    };
+
+    const rows = recentSignalsForPanels.map((signal) => {
       const fund = fundById.get(signal.fundId);
       if (!fund) return null;
 
       const { verified, disputed } = countSignalVotes(signal);
       const voteActivity = verified + disputed;
+      const qualityScore = signalQualityScore(signal);
       const signalTrust = trustScore(signal);
       const confidenceScore = clamp(Math.round((signalTrust * 0.55 + signal.confidence * 0.45) * 100), 0, 100);
       const impactScore = clamp(Math.round(fund.trendScore * 0.52 + signal.confidence * 35 + Math.min(22, voteActivity * 2.4)), 0, 100);
@@ -529,14 +726,13 @@ export function ForYouPage({
         100
       );
 
-      const priorityScore = Math.round(
-        impactScore * 0.38 + confidenceScore * 0.28 + recency * 0.2 + networkProximity * 0.14
+      const priorityScore = clamp(
+        Math.round(impactScore * 0.34 + confidenceScore * 0.25 + recency * 0.18 + networkProximity * 0.11 + qualityScore * 0.18),
+        0,
+        100
       );
 
-      const sourceCount =
-        1 +
-        Number(Boolean(signal.evidence?.url || signal.evidenceUrl)) +
-        Number(Boolean(signal.evidence?.snippet || signal.evidenceSnippet));
+      const sourceCount = signalSourceCount(signal);
 
       const theme = themeTitle(themeSlugForSignal(signal));
       let rationale = `${theme} signal with elevated market impact.`;
@@ -546,6 +742,8 @@ export function ForYouPage({
         rationale = "Contested signal with active verification disagreement.";
       } else if (confidenceScore >= 78) {
         rationale = "High-confidence signal with recent validation activity.";
+      } else if (qualityScore >= 62) {
+        rationale = "Source-aligned signal with strong supporting context.";
       }
 
       return {
@@ -563,17 +761,62 @@ export function ForYouPage({
         rationale,
         createdAt: signal.createdAt,
         href: `/cerebrosfund/signals?signalId=${encodeURIComponent(signal.id)}#signal-${encodeURIComponent(signal.id)}`,
-      } satisfies TodaysSignalItem;
+        _fundId: fund.id,
+        _host: sourceHostForSignal(signal) || sourceLabelForSignal(signal),
+        _themeSlug: themeSlugForSignal(signal),
+        _headlineKey: canonicalSignalHeadline(signal),
+        _rank: priorityScore + Math.round(qualityScore * 0.35),
+      } satisfies RankedSignalRow;
     });
 
-    return rows
-      .filter((item): item is TodaysSignalItem => item !== null)
-      .sort((a, b) => b.priorityScore - a.priorityScore || b.impactScore - a.impactScore);
-  }, [fundById, now, recentSignals, watchlistFundIds, watchlistSectors, windowMs]);
+    const rankedRows = rows
+      .filter((item): item is RankedSignalRow => item !== null)
+      .sort((a, b) => b._rank - a._rank || b.priorityScore - a.priorityScore || b.impactScore - a.impactScore);
+
+    const selected: RankedSignalRow[] = [];
+    const headlineSeen = new Set<string>();
+    const fundCounts = new Map<string, number>();
+    const hostCounts = new Map<string, number>();
+    const themeCounts = new Map<string, number>();
+
+    const trySelect = (row: RankedSignalRow, strictCaps: boolean): boolean => {
+      if (headlineSeen.has(row._headlineKey)) return false;
+      const fundCount = fundCounts.get(row._fundId) ?? 0;
+      const hostCount = hostCounts.get(row._host) ?? 0;
+      const themeCount = themeCounts.get(row._themeSlug) ?? 0;
+
+      if (strictCaps) {
+        if (fundCount >= 1) return false;
+        if (row._host && hostCount >= 1) return false;
+        if (themeCount >= 2) return false;
+      } else {
+        if (fundCount >= 2) return false;
+        if (row._host && hostCount >= 2) return false;
+        if (themeCount >= 3) return false;
+      }
+
+      selected.push(row);
+      headlineSeen.add(row._headlineKey);
+      fundCounts.set(row._fundId, fundCount + 1);
+      if (row._host) hostCounts.set(row._host, hostCount + 1);
+      themeCounts.set(row._themeSlug, themeCount + 1);
+      return true;
+    };
+
+    for (const strictCaps of [true, false]) {
+      for (const row of rankedRows) {
+        if (selected.length >= 12) break;
+        trySelect(row, strictCaps);
+      }
+      if (selected.length >= 12) break;
+    }
+
+    return selected.map(({ _fundId, _host, _themeSlug, _headlineKey, _rank, ...item }) => item);
+  }, [fundById, now, recentSignalsForPanels, watchlistFundIds, watchlistSectors, windowMs]);
 
   const trendingFunds = useMemo<TrendingFundPanelItem[]>(() => {
     const recentByFund = new Map<string, Signal[]>();
-    for (const signal of recentSignals) {
+    for (const signal of recentSignalsForPanels) {
       const existing = recentByFund.get(signal.fundId) ?? [];
       existing.push(signal);
       recentByFund.set(signal.fundId, existing);
@@ -630,63 +873,128 @@ export function ForYouPage({
         graphQuery: item.graphQuery,
         graphHref: item.graphHref,
       }));
-  }, [funds, now, previousSignals, recentSignals, recommendationScoreByFund, selectedWindowDays]);
+  }, [funds, now, previousSignals, recentSignalsForPanels, recommendationScoreByFund, selectedWindowDays]);
 
   const claimsDebate = useMemo<ClaimDebateItem[]>(() => {
-    const citationSignalPool = recentSignals.length ? recentSignals : signalsByRecency;
-    if (recentClaims.length) {
-      return recentClaims
-        .map((claim) => {
-          const { verified, disputed } = countClaimVotes(claim);
-          const confidence = claimConfidence(claim);
-          const recencyWeight = clamp(48 - ageHours(claim.createdAt, now), 0, 48);
-          const score = disputed * 2.2 + verified * 1.4 + confidence * 24 + recencyWeight;
-          const linkedFundNames = claim.linkedFundIds
-            .map((fundId) => fundById.get(fundId)?.name)
-            .filter((name): name is string => Boolean(name));
-          const theme = themeTitle(themeSlugForClaim(claim));
-          const graphQuery =
-            linkedFundNames.length >= 2
-              ? `common investments between ${linkedFundNames[0]} and ${linkedFundNames[1]}`
-              : linkedFundNames.length === 1
-                ? `companies ${linkedFundNames[0]} invested in`
-                : `funds investing in ${theme}`;
-          const graphHref = `/cerebrosfund/graph?claimId=${encodeURIComponent(claim.id)}&q=${encodeURIComponent(graphQuery)}`;
-          const citationSignal = resolveSignalForClaim(claim, citationSignalPool);
-          return {
-            id: claim.id,
-            claim: trimLine(claim.claimText, 120),
-            supportCount: verified,
-            contestedCount: disputed,
-            confidence,
-            createdAt: claim.createdAt,
-            href: graphHref,
-            addCitationHref: citationSignal ? signalCitationQuickHref(citationSignal.id) : "/cerebrosfund/signals",
-            graphQuery,
-            score,
-          };
-        })
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 5)
-        .map((item) => ({
-          id: item.id,
-          claim: item.claim,
-          supportCount: item.supportCount,
-          contestedCount: item.contestedCount,
-          confidence: item.confidence,
-          createdAt: item.createdAt,
-          href: item.href,
-          addCitationHref: item.addCitationHref,
-          graphQuery: item.graphQuery,
-        }));
+    const citationSignalPool = recentSignalsForPanels.length
+      ? recentSignalsForPanels
+      : qualitySignalsByRecency.length
+        ? qualitySignalsByRecency
+        : signalsByRecency;
+
+    const rankedClaims = recentClaims
+      .map((claim) => {
+        const { verified, disputed } = countClaimVotes(claim);
+        const confidence = claimConfidence(claim);
+        const recencyWeight = clamp(48 - ageHours(claim.createdAt, now), 0, 48);
+        const linkedFundNames = claim.linkedFundIds
+          .map((fundId) => fundById.get(fundId)?.name)
+          .filter((name): name is string => Boolean(name));
+        const theme = themeTitle(themeSlugForClaim(claim));
+        const claimText = normalizeText(claim.claimText);
+        const actionIntent = claimActionIntentScore(claimText);
+        const noisePenalty = claimNoisePenalty(claimText);
+        if (noisePenalty >= 2 && actionIntent <= 1 && verified + disputed < 5) {
+          return null;
+        }
+        const graphQuery =
+          linkedFundNames.length >= 2
+            ? `common investments between ${linkedFundNames[0]} and ${linkedFundNames[1]}`
+            : linkedFundNames.length === 1
+              ? graphFundQuery(linkedFundNames[0], claimText)
+              : `funds investing in ${theme}`;
+        const graphHref = `/cerebrosfund/graph?claimId=${encodeURIComponent(claim.id)}&q=${encodeURIComponent(graphQuery)}`;
+        const citationSignal = resolveSignalForClaim(claim, citationSignalPool);
+        const linkedSignalQuality = citationSignal ? signalQualityScore(citationSignal) : 24;
+        if (citationSignal && !isSignalEligibleForForYou(citationSignal) && verified + disputed < 4) {
+          return null;
+        }
+
+        const score =
+          disputed * 2.2 +
+          verified * 1.5 +
+          confidence * 24 +
+          recencyWeight +
+          linkedSignalQuality * 0.22 +
+          Math.min(8, (verified + disputed) * 1.2) +
+          actionIntent * 4.6 -
+          noisePenalty * 6.4;
+
+        return {
+          id: claim.id,
+          claim: trimLine(claim.claimText, 120),
+          supportCount: verified,
+          contestedCount: disputed,
+          confidence,
+          createdAt: claim.createdAt,
+          href: graphHref,
+          addCitationHref: citationSignal ? signalCitationQuickHref(citationSignal.id) : "/cerebrosfund/signals",
+          graphQuery,
+          score,
+          _queryKey: normalizeText(graphQuery),
+          _fundKey: linkedFundNames[0] ?? "none",
+          _claimKey: normalizeText(claim.claimText),
+        };
+      })
+      .filter(
+        (
+          item
+        ): item is {
+          id: string;
+          claim: string;
+          supportCount: number;
+          contestedCount: number;
+          confidence: number;
+          createdAt: string;
+          href: string;
+          addCitationHref: string;
+          graphQuery: string;
+          score: number;
+          _queryKey: string;
+          _fundKey: string;
+          _claimKey: string;
+        } => Boolean(item)
+      )
+      .sort((a, b) => b.score - a.score);
+
+    if (rankedClaims.length) {
+      const selected: typeof rankedClaims = [];
+      const seenQueries = new Set<string>();
+      const seenClaims = new Set<string>();
+      const fundCounts = new Map<string, number>();
+
+      for (const item of rankedClaims) {
+        if (selected.length >= 5) break;
+        if (seenQueries.has(item._queryKey) || seenClaims.has(item._claimKey)) continue;
+        const fundCount = fundCounts.get(item._fundKey) ?? 0;
+        if (fundCount >= 2) continue;
+        selected.push(item);
+        seenQueries.add(item._queryKey);
+        seenClaims.add(item._claimKey);
+        fundCounts.set(item._fundKey, fundCount + 1);
+      }
+
+      return selected.map((item) => ({
+        id: item.id,
+        claim: item.claim,
+        supportCount: item.supportCount,
+        contestedCount: item.contestedCount,
+        confidence: item.confidence,
+        createdAt: item.createdAt,
+        href: item.href,
+        addCitationHref: item.addCitationHref,
+        graphQuery: item.graphQuery,
+      }));
     }
 
-    return recentSignals
+    return recentSignalsForPanels
       .map((signal) => {
         const { verified, disputed } = countSignalVotes(signal);
-        const score = disputed * 2 + verified + signal.confidence * 20;
+        if (verified + disputed <= 0) return null;
+        const score = disputed * 2 + verified + signal.confidence * 20 + signalQualityScore(signal) * 0.2;
         const fundName = fundById.get(signal.fundId)?.name ?? "Tracked fund";
-        const graphQuery = `companies ${fundName} invested in`;
+        const signalText = normalizeText(`${signal.title} ${signal.summary}`);
+        const graphQuery = graphFundQuery(fundName, signalText);
         return {
           id: `signal-fallback-${signal.id}`,
           claim: trimLine(signal.title, 120),
@@ -700,7 +1008,22 @@ export function ForYouPage({
           score,
         };
       })
-      .filter((item) => item.supportCount > 0 || item.contestedCount > 0)
+      .filter(
+        (
+          item
+        ): item is {
+          id: string;
+          claim: string;
+          supportCount: number;
+          contestedCount: number;
+          confidence: number;
+          createdAt: string;
+          href: string;
+          addCitationHref: string;
+          graphQuery: string;
+          score: number;
+        } => Boolean(item)
+      )
       .sort((a, b) => b.score - a.score)
       .slice(0, 5)
       .map((item) => ({
@@ -714,7 +1037,7 @@ export function ForYouPage({
         addCitationHref: item.addCitationHref,
         graphQuery: item.graphQuery,
       }));
-  }, [fundById, now, recentClaims, recentSignals, signalsByRecency]);
+  }, [fundById, now, qualitySignalsByRecency, recentClaims, recentSignalsForPanels, signalsByRecency]);
 
   const graphEvents = useMemo<GraphEventItem[]>(() => {
     const events: GraphEventItem[] = [];
@@ -746,15 +1069,27 @@ export function ForYouPage({
       });
     }
 
-    const founderKeywords = ["founder", "founded", "alumni", "hiring", "joins", "team"];
-    const founderSignals = recentSignals.filter((signal) => {
+    const founderKeywords = ["founder", "founded", "co-founder", "hiring", "joins", "executive", "ceo", "cto"];
+    const founderSignals = recentSignalsForPanels.filter((signal) => {
       const text = normalizeText(`${signal.title} ${signal.summary}`);
-      return founderKeywords.some((keyword) => text.includes(keyword));
+      return founderKeywords.some((keyword) => text.includes(keyword)) && signalQualityScore(signal) >= 18;
     });
 
     if (founderSignals.length) {
-      const topFounderSignal = [...founderSignals].sort((a, b) => b.confidence - a.confidence)[0];
-      const fundName = fundById.get(topFounderSignal.fundId)?.name ?? "Tracked fund";
+      const founderCounts = new Map<string, { count: number; score: number }>();
+      for (const signal of founderSignals) {
+        const existing = founderCounts.get(signal.fundId) ?? { count: 0, score: 0 };
+        existing.count += 1;
+        existing.score += signalQualityScore(signal) + signal.confidence * 20;
+        founderCounts.set(signal.fundId, existing);
+      }
+
+      const [topFundId] =
+        [...founderCounts.entries()].sort((left, right) => right[1].score - left[1].score || right[1].count - left[1].count)[0] ?? [];
+      const topFounderSignal = [...founderSignals].sort(
+        (a, b) => signalQualityScore(b) + b.confidence * 20 - (signalQualityScore(a) + a.confidence * 20)
+      )[0];
+      const fundName = fundById.get(topFundId || topFounderSignal.fundId)?.name ?? "Tracked fund";
       const graphQuery = `founders ${fundName} invested in`;
       events.push({
         id: "event-founder-movement",
@@ -766,13 +1101,15 @@ export function ForYouPage({
     }
 
     const relationshipKeywords = ["raise", "raises", "led", "invest", "partnership", "acquire", "launch"];
-    const relationshipSignals = recentSignals.filter((signal) => {
+    const relationshipSignals = recentSignalsForPanels.filter((signal) => {
       const text = normalizeText(`${signal.title} ${signal.summary}`);
-      return relationshipKeywords.some((keyword) => text.includes(keyword));
+      return relationshipKeywords.some((keyword) => text.includes(keyword)) && signalQualityScore(signal) >= 20;
     });
 
     if (relationshipSignals.length) {
-      const strongest = [...relationshipSignals].sort((a, b) => b.confidence - a.confidence)[0];
+      const strongest = [...relationshipSignals].sort(
+        (a, b) => signalQualityScore(b) + b.confidence * 14 - (signalQualityScore(a) + a.confidence * 14)
+      )[0];
       const fund = fundById.get(strongest.fundId);
       const fundName = fund?.name ?? "Tracked fund";
       const anchorCompany = fund?.portfolio[0];
@@ -798,7 +1135,7 @@ export function ForYouPage({
     }
 
     return events.slice(0, 4);
-  }, [claimsDebate, fundById, recentSignals, selectedWindow, trendingFunds]);
+  }, [claimsDebate, fundById, recentSignalsForPanels, selectedWindow, trendingFunds]);
 
   const emergingOpportunities = useMemo<EmergingOpportunityItem[]>(() => {
     const seeds = themeDrivers.slice(0, 6);
@@ -875,7 +1212,7 @@ export function ForYouPage({
       });
     }
 
-    const relationship = graphEvents[0];
+    const relationship = graphEvents.find((event) => event.kind === "founder-movement") ?? graphEvents[0];
     if (relationship) {
       items.push({
         id: `snapshot-event-${relationship.id}`,
@@ -887,9 +1224,21 @@ export function ForYouPage({
       });
     }
 
+    const topOpportunity = emergingOpportunities[0];
+    if (topOpportunity) {
+      items.push({
+        id: `snapshot-opportunity-${topOpportunity.id}`,
+        title: `${topOpportunity.label} shows breakout momentum`,
+        subtitle: `${topOpportunity.supportCount} supporting signals with ${topOpportunity.trendDelta >= 0 ? "+" : ""}${topOpportunity.trendDelta} trend change.`,
+        sourceLabel: "Emerging opportunities",
+        href: topOpportunity.href,
+        query: topOpportunity.graphQuery,
+      });
+    }
+
     const topSignal = todaysSignals[0];
     if (topSignal) {
-      const query = `companies ${topSignal.fundName} invested in`;
+      const query = graphFundQuery(topSignal.fundName, normalizeText(topSignal.title));
       items.push({
         id: `snapshot-signal-${topSignal.id}`,
         title: "Today’s brief anchor signal",
@@ -900,14 +1249,20 @@ export function ForYouPage({
       });
     }
 
-    const uniqueByHref = new Map<string, GraphQuerySnapshotItem>();
+    const uniqueByQuery = new Set<string>();
+    const uniqueByHref = new Set<string>();
+    const uniqueItems: GraphQuerySnapshotItem[] = [];
     for (const item of items) {
-      if (uniqueByHref.has(item.href)) continue;
-      uniqueByHref.set(item.href, item);
+      const queryKey = normalizeText(item.query);
+      if (!queryKey) continue;
+      if (uniqueByQuery.has(queryKey) || uniqueByHref.has(item.href)) continue;
+      uniqueByQuery.add(queryKey);
+      uniqueByHref.add(item.href);
+      uniqueItems.push(item);
     }
 
-    return Array.from(uniqueByHref.values()).slice(0, 6);
-  }, [claimsDebate, graphEvents, themeDrivers, todaysSignals, trendingFunds]);
+    return uniqueItems.slice(0, 6);
+  }, [claimsDebate, emergingOpportunities, graphEvents, themeDrivers, todaysSignals, trendingFunds]);
 
   return (
     <div className="space-y-5">
