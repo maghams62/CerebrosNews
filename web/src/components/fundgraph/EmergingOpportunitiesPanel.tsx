@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { EmergingOpportunityItem } from "@/components/fundgraph/forYouTypes";
+import { SectionHelpTooltip } from "@/components/fundgraph/SectionHelpTooltip";
 
 function bubbleColor(item: EmergingOpportunityItem): { fill: string; ring: string; text: string } {
   const contestedRatio = item.contestedCount / Math.max(1, item.supportCount);
@@ -36,7 +37,10 @@ export function EmergingOpportunitiesPanel({ items }: { items: EmergingOpportuni
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="text-xs font-semibold tracking-[0.08em] text-slate-500 uppercase">Opportunity Scan</div>
-          <h2 className="mt-1 text-xl font-semibold text-slate-900">Emerging opportunities</h2>
+          <div className="mt-1 flex items-center gap-2">
+            <h2 className="text-xl font-semibold text-slate-900">Emerging opportunities</h2>
+            <SectionHelpTooltip text="Surfaces new opportunities so you can quickly open the most promising graph paths." />
+          </div>
           <p className="mt-1 text-sm text-slate-600">Bubble size shows support, height shows impact, and horizontal drift shows momentum.</p>
         </div>
         <Link

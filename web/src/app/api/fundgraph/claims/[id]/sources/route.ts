@@ -127,7 +127,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     await addSource(source);
     sourceIdForReward = source.id;
   }
-  const gamification = await applyContribution(userId, "add_source", sourceIdForReward);
+  const gamification = await applyContribution(userId, "add_source", `claim:${id}:source:${sourceIdForReward}`);
 
   return NextResponse.json({
     mode: getFundgraphDataMode(),

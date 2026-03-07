@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { GraphQuerySnapshotItem } from "@/components/fundgraph/forYouTypes";
+import { SectionHelpTooltip } from "@/components/fundgraph/SectionHelpTooltip";
 
 export function GraphQuerySnapshotsPanel({ items }: { items: GraphQuerySnapshotItem[] }) {
   const workspaceHref = items[0]?.href || "/cerebrosfund/graph";
@@ -10,7 +11,10 @@ export function GraphQuerySnapshotsPanel({ items }: { items: GraphQuerySnapshotI
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="text-xs font-semibold tracking-[0.08em] text-slate-500 uppercase">Graph Query Snapshot</div>
-          <h2 className="mt-1 text-xl font-semibold text-slate-900">Cross-tab opportunities to open</h2>
+          <div className="mt-1 flex items-center gap-2">
+            <h2 className="text-xl font-semibold text-slate-900">Cross-tab opportunities to open</h2>
+            <SectionHelpTooltip text="Gives ready-to-run graph queries so you can jump straight into analysis." />
+          </div>
           <p className="mt-1 text-sm text-slate-600">Click any snapshot to open a concrete graph query generated from this cockpit.</p>
         </div>
         <Link

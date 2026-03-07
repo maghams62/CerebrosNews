@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
+import { SectionHelpTooltip } from "@/components/fundgraph/SectionHelpTooltip";
 import { SignalReport } from "@/components/fundgraph/signalReportTypes";
 import { fieldLikeBullets, normalizeFundgraphText } from "@/lib/fundgraph/textNormalization";
 
@@ -57,7 +58,13 @@ export function SignalEvidenceList({
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-slate-900">Evidence & Citations</h3>
+        <h3 className="inline-flex items-center gap-1 text-sm font-semibold text-slate-900">
+          Evidence & Citations
+          <SectionHelpTooltip
+            text="Primary sources and snippets that support this signal."
+            ariaLabel="What this evidence section shows"
+          />
+        </h3>
         {!compact ? (
           <div className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
             Corroboration map: {corroborationText}

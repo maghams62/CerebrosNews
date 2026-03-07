@@ -1,11 +1,10 @@
 You are writing an investment decision memo for one fund.
 
-Goal:
-- Answer: should the user spend more diligence time on this fund, and why.
-- Synthesize from the packet only.
-- Never invent facts not present in the packet.
+Primary objective:
+- Produce a coherent, decision-ready memo that answers: should we spend more diligence time on this fund, and why now.
+- Use only the provided packet. Do not invent details, numbers, events, people, or citations.
 
-Output requirements:
+Output contract:
 - Return JSON only with this exact shape:
 {
   "sections": [
@@ -13,8 +12,7 @@ Output requirements:
   ]
 }
 
-Section requirements:
-- Include these sections in this order:
+Section keys and order:
 1) executive_summary
 2) fund_overview
 3) team_gp_assessment
@@ -22,26 +20,51 @@ Section requirements:
 5) portfolio_snapshot
 6) key_signals_recent_activity
 7) network_position
-8) bull_case
-9) risks_concerns
-10) open_questions
-11) final_view
+8) graph_snapshot
+9) graph_analyzer_insights
+10) bull_case
+11) risks_concerns
+12) open_questions
+13) final_view
 
-Evidence and citations:
-- Use citation tags provided in the packet (for example [S12], [C4]).
-- For every factual statement from claims/signals, include at least one citation tag when available.
-- If data is missing, explicitly say "Unknown" or "Data gap".
-- Do not repeat the same signal or claim text multiple times.
+Section writing rules:
+- Write each section as a compact, readable brief (not a data dump).
+- Start each section with one orienting line, then 3-7 bullets.
+- Every bullet must either:
+  - state a concrete observation, or
+  - state why that observation matters for the decision.
+- Avoid repeating the same fact across sections. If referenced again, add only new interpretation.
+- Keep statements falsifiable and specific; avoid vague filler.
 
-Reasoning quality:
-- Highlight both upside and downside.
-- Keep language decision-oriented and concrete.
-- Keep sections concise and structured so they can be edited as a working draft.
-- Prefer short bullets and practical next-step phrasing over long narrative paragraphs.
-- Final view must include:
-  - recommendation: Pursue / Monitor / Pass
-  - confidence: High / Medium / Low
-  - next action
+Section intent guide:
+- executive_summary: decision framing, current stance, why now, strongest evidence anchors.
+- fund_overview: what this fund is, where it plays, and basic operating context.
+- team_gp_assessment: who is driving decisions and what can/cannot be inferred from available data.
+- strategy: how the fund claims to win and whether current evidence supports that.
+- portfolio_snapshot: concentration, quality signals, and notable portfolio-level implications.
+- key_signals_recent_activity: most decision-relevant recent signals/claims and momentum direction.
+- network_position: syndicate/overlap posture and strategic implications.
+- graph_snapshot: brief interpretation of what the graph view currently suggests.
+- graph_analyzer_insights: explicit takeaways from graph patterns plus traceability limits.
+- bull_case: best evidence-backed upside path.
+- risks_concerns: key downside, disputes, contradictions, and missing-data risks.
+- open_questions: highest-value diligence questions that can change the decision.
+- final_view: explicit recommendation, confidence, and immediate next step.
+
+Evidence and citation rules:
+- Use citation tags from packet (example: [S12], [C4]) for factual statements when available.
+- If a claim/signal is mentioned as fact, include at least one citation tag when provided.
+- If evidence is missing, explicitly write "Data gap" or "Unknown".
+- Do not fabricate citation IDs.
+
+Decision discipline:
+- Separate observation from inference.
+- If evidence is mixed, say so directly.
+- Do not overstate certainty.
+- Keep final_view in this exact structure:
+  - Recommendation: Pursue / Monitor / Pass
+  - Confidence: High / Medium / Low
+  - Next action: one concrete action
 
 Subject:
 {{subject}}

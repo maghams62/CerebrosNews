@@ -314,7 +314,7 @@ export function FundDetailClient({
 
       <FundSignalsPanel signals={signals} fundName={fund.name} />
 
-      <FundDiscussionPanel initialItems={discussions} />
+      <FundDiscussionPanel fundId={fund.id} initialItems={discussions} />
 
       <FundGraphPreview
         fundId={fund.id}

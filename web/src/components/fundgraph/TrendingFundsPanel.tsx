@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { DEFAULT_MEMO_CONFIG, GenerateMemoModal, MemoConfig } from "@/components/fundgraph/GenerateMemoModal";
 import { TrendingFundPanelItem } from "@/components/fundgraph/forYouTypes";
+import { SectionHelpTooltip } from "@/components/fundgraph/SectionHelpTooltip";
 import { useFundGraphState } from "@/fundgraph/state";
 import { generateMemo } from "@/lib/fundgraph/client";
 
@@ -81,7 +82,10 @@ export function TrendingFundsPanel({ items }: { items: TrendingFundPanelItem[] }
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-xs font-semibold tracking-[0.08em] text-slate-500 uppercase">Trending Funds</div>
-          <h2 className="mt-1 text-xl font-semibold text-slate-900">Entities moving right now</h2>
+          <div className="mt-1 flex items-center gap-2">
+            <h2 className="text-xl font-semibold text-slate-900">Entities moving right now</h2>
+            <SectionHelpTooltip text="Highlights funds with strong recent movement so you can track who is gaining momentum." />
+          </div>
         </div>
         <Link
           href="/cerebrosfund/funds"

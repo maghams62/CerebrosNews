@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { GraphEventItem } from "@/components/fundgraph/forYouTypes";
+import { SectionHelpTooltip } from "@/components/fundgraph/SectionHelpTooltip";
 
 function label(kind: GraphEventItem["kind"]): string {
   if (kind === "co-investment") return "Co-investment";
@@ -16,7 +17,10 @@ export function GraphEventsPanel({ items }: { items: GraphEventItem[] }) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-xs font-semibold tracking-[0.08em] text-slate-500 uppercase">Network Pulse</div>
-          <h2 className="mt-1 text-xl font-semibold text-slate-900">Relationship events to investigate</h2>
+          <div className="mt-1 flex items-center gap-2">
+            <h2 className="text-xl font-semibold text-slate-900">Relationship events to investigate</h2>
+            <SectionHelpTooltip text="Flags relationship changes so you can investigate important network shifts." />
+          </div>
         </div>
         <Link
           href={analyzerHref}

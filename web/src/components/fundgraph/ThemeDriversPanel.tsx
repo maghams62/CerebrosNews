@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ThemeDriverRow } from "@/components/fundgraph/forYouTypes";
+import { SectionHelpTooltip } from "@/components/fundgraph/SectionHelpTooltip";
 
 function deltaTone(delta: number): string {
   if (delta > 0) return "bg-emerald-100 text-emerald-700";
@@ -15,7 +16,10 @@ export function ThemeDriversPanel({ items }: { items: ThemeDriverRow[] }) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-xs font-semibold tracking-[0.08em] text-slate-500 uppercase">Market Drivers</div>
-          <h2 className="mt-1 text-xl font-semibold text-slate-900">Highest-impact themes</h2>
+          <div className="mt-1 flex items-center gap-2">
+            <h2 className="text-xl font-semibold text-slate-900">Highest-impact themes</h2>
+            <SectionHelpTooltip text="Ranks the themes that matter most right now so you can focus your research." />
+          </div>
         </div>
         <Link
           href="/cerebrosfund/signals"

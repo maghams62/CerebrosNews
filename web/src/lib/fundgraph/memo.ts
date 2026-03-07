@@ -952,6 +952,59 @@ function normalizeLlmSections(
   return out;
 }
 
+const FUND_MEMO_SECTION_ORDER = [
+  "executive_summary",
+  "fund_overview",
+  "team_gp_assessment",
+  "strategy",
+  "portfolio_snapshot",
+  "key_signals_recent_activity",
+  "network_position",
+  "graph_snapshot",
+  "graph_analyzer_insights",
+  "bull_case",
+  "risks_concerns",
+  "open_questions",
+  "final_view",
+];
+
+const WATCHLIST_SECTION_ORDER = [
+  "watchlist_snapshot",
+  "today_highlights",
+  "watchlist_ranking",
+  "watchlist_key_signals",
+  "graph_snapshot",
+  "cross_fund_network_signals",
+  "watchlist_risks",
+  "watchlist_next_steps",
+];
+
+function hasRequiredSectionKeys(sections: MemoSection[], requiredKeys: string[]): boolean {
+  const keys = new Set(sections.map((section) => section.key));
+  return requiredKeys.every((key) => keys.has(key));
+}
+
+function orderSectionsByKeys(sections: MemoSection[], orderedKeys: string[]): MemoSection[] {
+  if (!sections.length) return sections;
+  const sectionByKey = new Map(sections.map((section) => [section.key, section] as const));
+  const ordered: MemoSection[] = [];
+  const added = new Set<string>();
+
+  for (const key of orderedKeys) {
+    const section = sectionByKey.get(key);
+    if (!section) continue;
+    ordered.push(section);
+    added.add(key);
+  }
+
+  for (const section of sections) {
+    if (added.has(section.key)) continue;
+    ordered.push(section);
+  }
+
+  return ordered;
+}
+
 export async function generateFundMemo(input: GenerateFundMemoInput): Promise<GenerateMemoOutput> {
   const options = normalizeMemoOptions(input);
   const depth = MEMO_DEPTH[options.memoType];
@@ -1329,8 +1382,17 @@ export async function generateFundMemo(input: GenerateFundMemoInput): Promise<Ge
         "memo_llm_timeout"
       );
       const llmSections = normalizeLlmSections(llm.sections);
-      if (llmSections.length >= 8) {
-        sections = llmSections;
+      if (
+        llmSections.length >= 8 &&
+        hasRequiredSectionKeys(llmSections, [
+          "executive_summary",
+          "fund_overview",
+          "key_signals_recent_activity",
+          "risks_concerns",
+          "final_view",
+        ])
+      ) {
+        sections = orderSectionsByKeys(llmSections, FUND_MEMO_SECTION_ORDER);
         generationMode = "llm";
       }
     } catch {
@@ -1727,8 +1789,18 @@ export async function generateWatchlistBrief(input: GenerateWatchlistBriefInput)
         "memo_llm_timeout"
       );
       const llmSections = normalizeLlmSections(llm.sections);
-      if (llmSections.length >= 5) {
-        sections = llmSections;
+      if (
+        llmSections.length >= 5 &&
+        hasRequiredSectionKeys(llmSections, [
+          "watchlist_snapshot",
+          "today_highlights",
+          "watchlist_ranking",
+          "watchlist_key_signals",
+          "watchlist_risks",
+          "watchlist_next_steps",
+        ])
+      ) {
+        sections = orderSectionsByKeys(llmSections, WATCHLIST_SECTION_ORDER);
         generationMode = "llm";
       }
     } catch {

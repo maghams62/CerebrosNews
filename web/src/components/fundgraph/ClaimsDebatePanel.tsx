@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ClaimDebateItem } from "@/components/fundgraph/forYouTypes";
+import { SectionHelpTooltip } from "@/components/fundgraph/SectionHelpTooltip";
 import { relativeTimeFromIso } from "@/components/fundgraph/utils";
 
 function confidenceTone(value: number): string {
@@ -16,7 +17,10 @@ export function ClaimsDebatePanel({ items, referenceNowMs }: { items: ClaimDebat
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-xs font-semibold tracking-[0.08em] text-slate-500 uppercase">Market-Moving Claims</div>
-          <h2 className="mt-1 text-xl font-semibold text-slate-900">Debated and emerging</h2>
+          <div className="mt-1 flex items-center gap-2">
+            <h2 className="text-xl font-semibold text-slate-900">Debated and emerging</h2>
+            <SectionHelpTooltip text="Shows debated claims so you can quickly see what still needs verification." />
+          </div>
         </div>
         <Link
           href="/cerebrosfund/claims"

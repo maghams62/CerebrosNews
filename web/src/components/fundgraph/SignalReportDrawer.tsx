@@ -10,6 +10,7 @@ import { SignalEvidenceGraph } from "@/components/fundgraph/SignalEvidenceGraph"
 import { SignalEvidenceList } from "@/components/fundgraph/SignalEvidenceList";
 import { SignalPoll } from "@/components/fundgraph/SignalPoll";
 import { SignalScoreBreakdown } from "@/components/fundgraph/SignalScoreBreakdown";
+import { SectionHelpTooltip } from "@/components/fundgraph/SectionHelpTooltip";
 import { SignalVerificationActivity } from "@/components/fundgraph/SignalVerificationActivity";
 import { useSignalUnlocks } from "@/components/fundgraph/useSignalUnlocks";
 import {
@@ -735,25 +736,19 @@ export function SignalReportDrawer({
               </div>
             </section>
 
-            <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-              <h3 className="text-sm font-semibold text-slate-900">Evidence & Citations</h3>
-              <div className="mt-3">
-                <SignalEvidenceList evidence={topEvidence} focusedEvidenceId={focusedEvidenceId} maxItems={3} compact />
-              </div>
-            </section>
+            <div className="mt-4">
+              <SignalEvidenceList evidence={topEvidence} focusedEvidenceId={focusedEvidenceId} maxItems={3} compact />
+            </div>
 
-            <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-              <h3 className="text-sm font-semibold text-slate-900">AI Quick Take</h3>
-              <div className="mt-3">
-                <SignalAISummary
-                  assertion={report.signal.claim}
-                  aiSummary={report.ai_summary}
-                  evidence={topEvidence}
-                  compact
-                  onCitationClick={(citationId) => setFocusedEvidenceId(citationId)}
-                />
-              </div>
-            </section>
+            <div className="mt-4">
+              <SignalAISummary
+                assertion={report.signal.claim}
+                aiSummary={report.ai_summary}
+                evidence={topEvidence}
+                compact
+                onCitationClick={(citationId) => setFocusedEvidenceId(citationId)}
+              />
+            </div>
 
             <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -810,7 +805,13 @@ export function SignalReportDrawer({
                 <>
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <h3 className="text-sm font-semibold text-slate-900">Deep Signal Analysis</h3>
+                      <h3 className="inline-flex items-center gap-1 text-sm font-semibold text-slate-900">
+                        Deep Signal Analysis
+                        <SectionHelpTooltip
+                          text="Expanded AI readout with scenarios, uncertainty, and related signal patterns."
+                          ariaLabel="What deep signal analysis means"
+                        />
+                      </h3>
                       <p className="mt-1 text-xs text-slate-600">Unlocked for this signal.</p>
                     </div>
                     <button
@@ -980,7 +981,13 @@ export function SignalReportDrawer({
                           </section>
 
                           <section className="rounded-2xl border border-slate-200 bg-white p-4">
-                            <h4 className="text-sm font-semibold text-slate-900">Network & related patterns</h4>
+                            <h4 className="inline-flex items-center gap-1 text-sm font-semibold text-slate-900">
+                              Network & related patterns
+                              <SectionHelpTooltip
+                                text="How this signal connects to nearby entities and historically similar signals."
+                                ariaLabel="What network and related patterns shows"
+                              />
+                            </h4>
                             <p className="mt-2 text-sm text-slate-700">{advancedInsight.graph_insight_summary}</p>
                             <p className="mt-2 text-sm text-slate-700">{advancedInsight.historical_context}</p>
                             {advancedInsight.related_signals.length ? (
@@ -1008,7 +1015,15 @@ export function SignalReportDrawer({
                           </section>
 
                           <details className="rounded-2xl border border-slate-200 bg-white p-4">
-                            <summary className="cursor-pointer text-sm font-semibold text-slate-900">Methodology & raw diagnostics</summary>
+                            <summary className="cursor-pointer text-sm font-semibold text-slate-900">
+                              <span className="inline-flex items-center gap-1">
+                                Methodology & raw diagnostics
+                                <SectionHelpTooltip
+                                  text="Scoring components, evidence graph, and trace details used to build the analysis."
+                                  ariaLabel="What methodology and diagnostics shows"
+                                />
+                              </span>
+                            </summary>
                             <div className="mt-4 space-y-4">
                               <SignalScoreBreakdown score={report.score} />
                               <SignalEvidenceGraph

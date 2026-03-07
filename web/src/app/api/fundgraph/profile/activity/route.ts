@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { resolveProfileActivityLink } from "@/fundgraph/profileActivityLinks";
 import { getFundgraphDataMode } from "@/lib/fundgraph/config";
 import { readFundgraphDb } from "@/lib/fundgraph/store";
 import { readFunds } from "@/lib/fundgraph/storage";
@@ -46,6 +47,9 @@ export async function GET(req: Request) {
   const { userId, limit } = parsed.data;
   const [db, funds] = await Promise.all([readFundgraphDb(), readFunds()]);
   const fundNameById = Object.fromEntries(funds.map((fund) => [fund.id, fund.name]));
+  const signalTitleById = new Map((db.signals ?? []).map((signal) => [signal.id, signal.title]));
+  const claimTextById = new Map((db.claims ?? []).map((claim) => [claim.id, claim.claimText]));
+  const memoIdSet = new Set((db.memos ?? []).map((memo) => memo.id));
 
   const allEvents = [...(db.contributionEvents ?? [])]
     .filter((event) => event.userId === userId)
@@ -86,13 +90,23 @@ export async function GET(req: Request) {
           : null,
   }));
 
-  const recentEvents = allEvents.slice(0, limit).map((event) => ({
-    id: event.id,
-    type: event.type,
-    targetId: event.targetId ?? null,
-    deltaCredits: event.deltaCredits,
-    createdAt: event.createdAt,
-  }));
+  const recentEvents = allEvents.slice(0, limit).map((event) => {
+    const link = resolveProfileActivityLink(event.type, event.targetId ?? null, {
+      fundNameById,
+      signalTitleById,
+      claimTextById,
+      memoIdSet,
+    });
+    return {
+      id: event.id,
+      type: event.type,
+      targetId: event.targetId ?? null,
+      href: link.href,
+      targetLabel: link.targetLabel,
+      deltaCredits: event.deltaCredits,
+      createdAt: event.createdAt,
+    };
+  });
 
   const recentVerifications = allVerifications.slice(0, limit).map((verification) => ({
     id: verification.id,

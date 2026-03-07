@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { SectionHelpTooltip } from "@/components/fundgraph/SectionHelpTooltip";
 import { SignalReport } from "@/components/fundgraph/signalReportTypes";
 
 function CitationChip({
@@ -55,7 +56,13 @@ export function SignalAISummary({
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-4">
-      <h3 className="text-sm font-semibold text-slate-900">{compact ? "AI Quick Take" : "AI Summary"}</h3>
+      <h3 className="inline-flex items-center gap-1 text-sm font-semibold text-slate-900">
+        {compact ? "AI Quick Take" : "AI Summary"}
+        <SectionHelpTooltip
+          text="Short AI synthesis of what this signal claims and how strongly current evidence supports it."
+          ariaLabel="What this AI summary section shows"
+        />
+      </h3>
       {compact ? (
         <>
           <p className="mt-2 text-sm text-slate-700">{aiSummary.summary_paragraph}</p>

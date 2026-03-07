@@ -7,8 +7,10 @@ import { useFundGraphState } from "@/fundgraph/state";
 import { contribute } from "@/lib/fundgraph/client";
 
 export function FundDiscussionPanel({
+  fundId,
   initialItems,
 }: {
+  fundId: string;
   initialItems: FundDiscussionItem[];
 }) {
   const { userId, applyContributor } = useFundGraphState();
@@ -41,7 +43,8 @@ export function FundDiscussionPanel({
     ]);
     setDraft("");
     try {
-      const snapshot = await contribute("add_comment", commentId, userId);
+      const targetId = `fund:${fundId}:comment:${commentId}`;
+      const snapshot = await contribute("add_comment", targetId, userId);
       applyContributor({ userId: snapshot.userId, gamification: snapshot });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to award comment credits.";
@@ -52,7 +55,7 @@ export function FundDiscussionPanel({
   }
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition duration-150 hover:shadow-md">
+    <section id="fund-discussion" className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition duration-150 hover:shadow-md">
       <h2 className="text-sm font-semibold text-slate-900">Signal Discussions</h2>
       <p className="mt-1 text-sm text-slate-600">Community context linked to the same fund-level signal stream.</p>
 

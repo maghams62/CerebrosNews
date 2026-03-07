@@ -266,7 +266,10 @@ export function ProfileControlCenter() {
       { label: "Shortlist", value: shortlist.fundIds.length, href: "/cerebrosfund/shortlist" },
       { label: "Memos Created", value: activity.summary.memosCreated, href: "#my-memos" },
       { label: "Signals Published", value: activity.summary.signalsPublished, href: "#contribution-activity" },
+      { label: "Comments Added", value: activity.summary.commentsAdded, href: "#contribution-activity" },
       { label: "Citations Added", value: activity.summary.citationsAdded, href: "#contribution-activity" },
+      { label: "Shares Submitted", value: activity.summary.sharesSubmitted, href: "#contribution-activity" },
+      { label: "Stances Submitted", value: activity.summary.stancesSubmitted, href: "#contribution-activity" },
       { label: "Disputes Submitted", value: activity.summary.disputesSubmitted, href: "#contribution-activity" },
     ],
     [activity.summary, shortlist.fundIds.length, shortlist.signalIds.length]

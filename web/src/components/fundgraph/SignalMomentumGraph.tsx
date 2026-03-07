@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { SignalMomentumTheme } from "@/components/fundgraph/forYouTypes";
+import { SectionHelpTooltip } from "@/components/fundgraph/SectionHelpTooltip";
 
 const LINE_COLORS = ["#3b82f6", "#10b981", "#8b5cf6", "#f59e0b", "#ef4444"];
 
@@ -45,7 +46,10 @@ export function SignalMomentumGraph({ items, windowLabel }: { items: SignalMomen
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="text-xs font-semibold tracking-[0.08em] text-slate-500 uppercase">Market Movement</div>
-          <h2 className="mt-1 text-xl font-semibold text-slate-900">Signal momentum ({windowLabel})</h2>
+          <div className="mt-1 flex items-center gap-2">
+            <h2 className="text-xl font-semibold text-slate-900">Signal momentum ({windowLabel})</h2>
+            <SectionHelpTooltip text="Shows which themes are heating up or cooling down so you can spot movement fast." />
+          </div>
           <p className="mt-1 text-sm text-slate-600">What themes are accelerating or cooling off.</p>
         </div>
         <Link
