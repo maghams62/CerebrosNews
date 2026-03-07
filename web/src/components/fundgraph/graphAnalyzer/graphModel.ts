@@ -3506,7 +3506,6 @@ export function buildGraphDisplayResult(
 export function focusOptions(graph: GraphAnalyzerData): Array<{ id: string; label: string; type: GraphAnalyzerNode["type"] }> {
   return [...graph.nodes]
     .sort((left, right) => left.label.localeCompare(right.label))
-    .slice(0, 300)
     .map((node) => ({
       id: node.id,
       label: node.label,
