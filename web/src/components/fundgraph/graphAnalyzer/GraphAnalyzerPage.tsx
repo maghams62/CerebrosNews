@@ -396,7 +396,7 @@ export function GraphAnalyzerPage({
 
   const [presetId, setPresetId] = useState<GraphAnalyzerPresetId>("CO_INVESTMENT");
   const [timeline, setTimeline] = useState<"6M" | "12M" | "ALL">("ALL");
-  const [hopDepth, setHopDepth] = useState(2);
+  const [hopDepth, setHopDepth] = useState(1);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [sector, setSector] = useState("ALL");
   const [stage, setStage] = useState("ALL");
@@ -477,7 +477,7 @@ export function GraphAnalyzerPage({
     const preset = getPresetById(presetId);
     if (!preset) return;
 
-    setHopDepth(Math.max(1, Math.min(limits.graphDepth, preset.defaultHopDepth)));
+    setHopDepth(Math.max(1, Math.min(limits.graphDepth, 1)));
     setEntityTypeEnabled(defaultEnabledTypes(presetId));
     setQueryResult(null);
     setQuery("");

@@ -1673,6 +1673,63 @@ function normalizeEntityLookup(value: string): string {
   return normalized.replace(/\s+/g, " ").trim();
 }
 
+const COMPANY_CANONICAL_SUFFIX_TOKENS = new Set([
+  "ai",
+  "co",
+  "company",
+  "corp",
+  "corporation",
+  "inc",
+  "labs",
+  "technologies",
+  "technology",
+]);
+
+function canonicalCompanyLookup(value: string): string {
+  const normalized = normalizeEntityLookup(value);
+  if (!normalized) return "";
+  const tokens = normalized
+    .split(" ")
+    .filter(Boolean)
+    .filter((token) => !COMPANY_CANONICAL_SUFFIX_TOKENS.has(token));
+  return (tokens.join(" ") || normalized).trim();
+}
+
+function equivalentSeedNodeIdsForSearch(
+  graph: GraphAnalyzerData,
+  topNode: GraphAnalyzerNode,
+  phrase: string
+): string[] {
+  const topLabel = normalizeEntityLookup(topNode.label);
+  const normalizedPhrase = normalizeEntityLookup(phrase);
+  const topCompanyCanonical = topNode.type === "company" ? canonicalCompanyLookup(topNode.label) : "";
+  const phraseCompanyCanonical = topNode.type === "company" ? canonicalCompanyLookup(phrase) : "";
+
+  const seedNodeIds = new Set<string>([topNode.id]);
+  for (const candidate of graph.nodes) {
+    if (candidate.type !== topNode.type) continue;
+
+    const candidateLabel = normalizeEntityLookup(candidate.label);
+    if (!candidateLabel) continue;
+
+    const directMatch = candidateLabel === topLabel || (normalizedPhrase && candidateLabel === normalizedPhrase);
+    let aliasMatch = false;
+    if (topNode.type === "company") {
+      const candidateCanonical = canonicalCompanyLookup(candidate.label);
+      aliasMatch = Boolean(
+        (candidateCanonical && topCompanyCanonical && candidateCanonical === topCompanyCanonical) ||
+          (candidateCanonical && phraseCompanyCanonical && candidateCanonical === phraseCompanyCanonical)
+      );
+    }
+
+    if (!directMatch && !aliasMatch) continue;
+    seedNodeIds.add(candidate.id);
+    if (seedNodeIds.size >= 6) break;
+  }
+
+  return Array.from(seedNodeIds);
+}
+
 function uniqueQueryTokens(value: string): string[] {
   const tokens = normalizeToken(value)
     .split(" ")
@@ -3080,10 +3137,15 @@ function runGenericSearch(query: string, graph: GraphAnalyzerData, phrase: strin
       topEntry.score >= runnerUpEntry.score + 25;
 
     if (highConfidenceTopMatch) {
+      const seedNodeIds = equivalentSeedNodeIdsForSearch(graph, topNode, phrase);
+      const seedNodeIdSet = new Set(seedNodeIds);
       const adjacency = buildAdjacency(graph.edges);
-      const oneHopNodeIds = collectHopNeighborhood(adjacency, [topNode.id], 1);
-      const oneHopEdges = collectIncidentEdges(graph, new Set([topNode.id])).filter(
-        (edge) => oneHopNodeIds.has(edge.source) && oneHopNodeIds.has(edge.target)
+      const oneHopNodeIds = collectHopNeighborhood(adjacency, seedNodeIds, 1);
+      const oneHopEdges = graph.edges.filter(
+        (edge) =>
+          (seedNodeIdSet.has(edge.source) || seedNodeIdSet.has(edge.target)) &&
+          oneHopNodeIds.has(edge.source) &&
+          oneHopNodeIds.has(edge.target)
       );
 
       return {
