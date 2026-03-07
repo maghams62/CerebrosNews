@@ -40,7 +40,7 @@ export const LIMITS_BY_TIER: Record<Tier, TierLimits> = {
   visitor: {
     maxClaimsVisible: 5,
     maxSignalsVisible: 3,
-    graphDepth: 1,
+    graphDepth: 4,
     memoAllowed: false,
     fullAccess: false,
     earlySignals: false,

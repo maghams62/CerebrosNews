@@ -571,10 +571,9 @@ export function GraphAnalyzerPage({
 
   const filteredGraph = useMemo(() => {
     if (!activePreset) return EMPTY_GRAPH;
-    const effectiveHopDepth = edgeTypeFilter === "ALL" && focusNodeId ? 1 : hopDepth;
     return applyGraphFilters(edgeTypeSourceGraph, {
       timeline,
-      hopDepth: effectiveHopDepth,
+      hopDepth,
       verifiedOnly,
       sector,
       stage,
