@@ -998,7 +998,19 @@ export function GraphAnalyzerPage({
                 <span className="text-[11px] font-semibold tracking-[0.08em] text-slate-500 uppercase">Focus Entity</span>
                 <select
                   value={focusNodeId}
-                  onChange={(event) => setFocusNodeId(event.target.value)}
+                  onChange={(event) => {
+                    const nextFocusId = event.target.value;
+                    setFocusNodeId(nextFocusId);
+                    setSelectedEdgeId("");
+                    setHoveredEdgeId("");
+
+                    // If no query is active, treat focus as a neighborhood view trigger.
+                    if (!query.trim()) {
+                      setQueryResult(null);
+                      setSelectedNodeId(nextFocusId);
+                      setDisplayMode(nextFocusId ? "focus" : "overview");
+                    }
+                  }}
                   className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none"
                 >
                   <option value="">None</option>
@@ -1102,10 +1114,15 @@ export function GraphAnalyzerPage({
                 onClick={() => {
                   setQuery("");
                   setQueryResult(null);
-                  setSelectedNodeId("");
                   setSelectedEdgeId("");
                   setHoveredEdgeId("");
-                  setDisplayMode("overview");
+                  if (focusNodeId) {
+                    setSelectedNodeId(focusNodeId);
+                    setDisplayMode("focus");
+                  } else {
+                    setSelectedNodeId("");
+                    setDisplayMode("overview");
+                  }
                 }}
                 className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700"
               >
