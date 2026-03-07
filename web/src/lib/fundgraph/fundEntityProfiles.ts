@@ -56,6 +56,83 @@ const COMPANY_ALIASES: Record<string, string> = {
   space: "SpaceX",
 };
 
+const NON_COMPANY_TOKENS = new Set([
+  "ai",
+  "all",
+  "announce",
+  "announced",
+  "announcement",
+  "announcements",
+  "assisted",
+  "best",
+  "blog",
+  "capital",
+  "chat",
+  "cli",
+  "company",
+  "dev",
+  "enterprise",
+  "first",
+  "founder",
+  "founders",
+  "funding",
+  "generative",
+  "healthtech",
+  "insight",
+  "insights",
+  "investment",
+  "investments",
+  "jobs",
+  "lead",
+  "limited",
+  "map",
+  "maps",
+  "market",
+  "markets",
+  "newsroom",
+  "now",
+  "ops",
+  "other",
+  "perspectives",
+  "plans",
+  "portfolio",
+  "powered",
+  "practices",
+  "round",
+  "seed",
+  "series",
+  "software",
+  "startup",
+  "startups",
+  "stories",
+  "story",
+  "team",
+  "tech",
+  "temporary",
+  "their",
+  "theme",
+  "themes",
+  "this",
+  "today",
+  "topics",
+  "vertical",
+  "we",
+  "why",
+  "year",
+]);
+
+const NON_COMPANY_PATTERNS: RegExp[] = [
+  /\bseries\s+[a-z0-9+.-]+\b/i,
+  /\bpre[-\s]?seed\b/i,
+  /\bseed\s+round\b/i,
+  /\bfunding\s+announcement(s)?\b/i,
+  /\bfounder\s+stories?\b/i,
+  /\ball\s+newsroom\b/i,
+  /\b(ai[-\s]?(assisted|powered|driven|generated))\b/i,
+  /\binvestment\s+themes?\b/i,
+  /\btopics\s+all\s+newsroom\b/i,
+];
+
 const COMPANY_PROFILES: Record<string, CompanyProfile> = {
   "OpenAI": {
     canonicalName: "OpenAI",
@@ -238,6 +315,30 @@ export function normalizePortfolioCompanyName(rawName: string): string {
   if (alias) return alias;
   const direct = COMPANY_PROFILES[trimmed];
   return direct?.canonicalName ?? trimmed;
+}
+
+export function sanitizePortfolioCompanyName(rawName: string): string | null {
+  const trimmed = String(rawName ?? "").replace(/\s+/g, " ").trim();
+  if (!trimmed) return null;
+
+  const canonical = normalizePortfolioCompanyName(trimmed);
+  if (COMPANY_PROFILES[canonical]) return canonical;
+
+  const normalized = normalizeToken(canonical);
+  if (!normalized || normalized.length < 2 || normalized.length > 64) return null;
+  if (/^\d+$/.test(normalized)) return null;
+  if (NON_COMPANY_PATTERNS.some((pattern) => pattern.test(normalized))) return null;
+
+  const tokens = normalized.split(" ").filter(Boolean);
+  if (!tokens.length || tokens.length > 6) return null;
+  if (tokens.some((token) => token.length === 1)) return null;
+
+  const badTokenCount = tokens.filter((token) => NON_COMPANY_TOKENS.has(token)).length;
+  const badRatio = badTokenCount / tokens.length;
+  if (badRatio >= 0.5) return null;
+  if (tokens.length === 1 && NON_COMPANY_TOKENS.has(tokens[0])) return null;
+
+  return canonical;
 }
 
 export function getPortfolioCompanyProfile(rawName: string): CompanyProfile | undefined {

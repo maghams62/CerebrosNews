@@ -1,4 +1,5 @@
 import { Fund } from "@/lib/fundgraph/types";
+import { sanitizePortfolioCompanyName } from "@/lib/fundgraph/fundEntityProfiles";
 
 export function normalizeMatchText(input: string): string {
   return input
@@ -145,10 +146,15 @@ export function fundGpRecords(fund: Fund): Array<{ id: string; name: string }> {
 
 export function fundCompanyRecords(fund: Fund): Array<{ id: string; name: string }> {
   const companies = Array.isArray(fund.portfolio) ? fund.portfolio : [];
-  const fromNames = companies.map((name, idx) => ({
-      id: `${fund.id}_co_${idx + 1}`,
-      name: String(name),
-    }));
+  const cleaned = uniq(
+    companies
+      .map((name) => sanitizePortfolioCompanyName(String(name)))
+      .filter((name): name is string => Boolean(name))
+  );
+  const fromNames = cleaned.map((name, idx) => ({
+    id: `${fund.id}_co_${idx + 1}`,
+    name,
+  }));
 
   return fromNames;
 }

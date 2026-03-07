@@ -4,6 +4,7 @@ import {
   getFoundersFromPortfolio,
   getFundLinkedinUrl,
   normalizePortfolioCompanyName,
+  sanitizePortfolioCompanyName,
 } from "@/lib/fundgraph/fundEntityProfiles";
 import { getFundOverview } from "@/lib/fundgraph/fundOverview";
 import { dedupeSignals } from "@/lib/fundgraph/signalDedup";
@@ -100,7 +101,9 @@ function topupPortfolioCompanies(fund: Fund, current: string[]): string[] {
   const curated = curatedPortfolioForFund(fund);
   if (curated.length) return curated;
 
-  const unique = Array.from(new Set(current.map((company) => normalizePortfolioCompanyName(company.trim())).filter(Boolean)));
+  const unique = Array.from(
+    new Set(current.map((company) => sanitizePortfolioCompanyName(company.trim())).filter((company): company is string => Boolean(company)))
+  );
   if (unique.length >= 3) return unique;
 
   const normalizedName = normalizePortfolioCompanyName(fund.name);
@@ -110,7 +113,7 @@ function topupPortfolioCompanies(fund: Fund, current: string[]): string[] {
   for (let offset = 0; offset < PORTFOLIO_TOPUP_COMPANIES.length && unique.length < 5; offset += 1) {
     const company =
       PORTFOLIO_TOPUP_COMPANIES[(start + offset * PORTFOLIO_TOPUP_STEP) % PORTFOLIO_TOPUP_COMPANIES.length];
-    const normalized = normalizePortfolioCompanyName(company);
+    const normalized = sanitizePortfolioCompanyName(company) ?? normalizePortfolioCompanyName(company);
     if (!normalized || normalized === normalizedName) continue;
     if (!unique.includes(normalized)) unique.push(normalized);
   }

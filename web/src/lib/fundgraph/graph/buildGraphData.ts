@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
 import { fundCompanyRecords, fundGpRecords } from "@/lib/fundgraph/fundEntities";
+import { sanitizePortfolioCompanyName } from "@/lib/fundgraph/fundEntityProfiles";
 import {
   filterClaimLinksByClaims,
   filterClaimsForDemoMode,
@@ -55,29 +56,44 @@ const ENTITY_STOPWORDS = new Set([
   "ventures",
 ]);
 const BAD_ENTITY_TOKENS = new Set([
+  "all",
   "about",
   "accept",
+  "announcements",
   "articles",
+  "cli",
   "close",
   "contact",
   "decline",
   "episodes",
+  "founder",
+  "founders",
   "global",
   "home",
   "immersive",
   "insights",
   "jobs",
   "listen",
+  "maps",
   "made",
+  "market",
+  "markets",
   "menu",
   "mission",
   "news",
+  "newsroom",
   "next",
   "no",
+  "ops",
+  "other",
   "open",
   "play",
   "previous",
   "privacy",
+  "series",
+  "software",
+  "stories",
+  "story",
   "read",
   "results",
   "scenarios",
@@ -85,9 +101,18 @@ const BAD_ENTITY_TOKENS = new Set([
   "skip",
   "stay",
   "team",
+  "tech",
+  "their",
+  "themes",
+  "this",
+  "today",
+  "topics",
   "terms",
   "thank",
   "toggle",
+  "we",
+  "why",
+  "year",
   "yes",
   "webflow",
 ]);
@@ -151,12 +176,24 @@ function isLikelyCompanyEntity(label: string): boolean {
   if (!normalized) return false;
   if (normalized.length < 2 || normalized.length > 64) return false;
   if (/\d{3,}/.test(normalized)) return false;
-  if (/^(series|seed|round|funding|investor|announcement|article|news)$/i.test(normalized)) return false;
+  if (/^(series|seed|round|funding|investor|announcement|article|news|tech|software|ops|other)$/i.test(normalized)) return false;
+  if (/\bseries\s+[a-z0-9+.-]+\b/i.test(normalized)) return false;
+  if (/\b(ai[-\s]?(assisted|powered|driven|generated))\b/i.test(normalized)) return false;
   const tokenized = normalizeText(normalized).replace(/-/g, " ").split(" ").filter(Boolean);
   if (!tokenized.length) return false;
   if (tokenized.some((token) => BAD_ENTITY_TOKENS.has(token))) return false;
   if (tokenized.every((token) => ENTITY_STOPWORDS.has(token))) return false;
+  if (tokenized.filter((token) => ENTITY_STOPWORDS.has(token) || BAD_ENTITY_TOKENS.has(token)).length / tokenized.length >= 0.5) {
+    return false;
+  }
   return true;
+}
+
+function sanitizeCompanyEntityLabel(rawLabel: string): string | null {
+  const normalized = normalizeEntityLabel(rawLabel);
+  if (!normalized) return null;
+  if (!isLikelyCompanyEntity(normalized)) return null;
+  return sanitizePortfolioCompanyName(normalized);
 }
 
 function buildFundNameLookup(funds: Fund[]): Set<string> {
@@ -314,11 +351,6 @@ function claimTrustMeta(claim: NewsClaim): Record<string, unknown> {
     trustTier: claim.trustTier,
     createdAt: claim.createdAt,
   };
-}
-
-function asCompanyNodeId(link: ClaimLink): string {
-  const raw = link.targetId?.trim() || companyKeyFromName(link.targetName);
-  return companyNodeId(raw);
 }
 
 function resolveFundFocusId(funds: Fund[], fundId?: string, slug?: string): string | undefined {
@@ -705,12 +737,13 @@ export async function buildGraphData(input: BuildGraphDataInput): Promise<GraphA
       if (!entityLabel) continue;
       if (entityLooksLikeFund(entityLabel, fundNameLookup)) continue;
 
-      if (!isLikelyCompanyEntity(entityLabel)) continue;
-      const companyId = companyNodeId(companyKeyFromName(entityLabel));
+      const cleanedCompany = sanitizeCompanyEntityLabel(entityLabel);
+      if (!cleanedCompany) continue;
+      const companyId = companyNodeId(companyKeyFromName(cleanedCompany));
       builder.addNode({
         id: companyId,
         type: "company",
-        label: entityLabel,
+        label: cleanedCompany,
         meta: {
           companyId: companyId.replace(/^company:/, ""),
           sourceId: source.id,
@@ -836,12 +869,13 @@ export async function buildGraphData(input: BuildGraphDataInput): Promise<GraphA
         continue;
       }
 
-      if (!isLikelyCompanyEntity(entityLabel)) continue;
-      const companyId = companyNodeId(companyKeyFromName(entityLabel));
+      const cleanedCompany = sanitizeCompanyEntityLabel(entityLabel);
+      if (!cleanedCompany) continue;
+      const companyId = companyNodeId(companyKeyFromName(cleanedCompany));
       builder.addNode({
         id: companyId,
         type: "company",
-        label: entityLabel,
+        label: cleanedCompany,
         meta: {
           companyId: companyId.replace(/^company:/, ""),
           relatedFundId: signal.fundId,
@@ -955,14 +989,16 @@ export async function buildGraphData(input: BuildGraphDataInput): Promise<GraphA
         continue;
       }
 
-      const companyId = asCompanyNodeId(link);
+      const cleanedCompany = sanitizeCompanyEntityLabel(link.targetName);
+      if (!cleanedCompany) continue;
+      const companyId = companyNodeId(companyKeyFromName(cleanedCompany));
       if (!companyNameById.has(companyId)) {
-        companyNameById.set(companyId, link.targetName);
+        companyNameById.set(companyId, cleanedCompany);
       }
       builder.addNode({
         id: companyId,
         type: "company",
-        label: companyNameById.get(companyId) ?? link.targetName,
+        label: companyNameById.get(companyId) ?? cleanedCompany,
         meta: {
           companyId: link.targetId,
           relatedFundId: claim.linkedFundIds?.[0],
@@ -1015,12 +1051,13 @@ export async function buildGraphData(input: BuildGraphDataInput): Promise<GraphA
         continue;
       }
 
-      if (!isLikelyCompanyEntity(entityLabel)) continue;
-      const companyId = companyNodeId(companyKeyFromName(entityLabel));
+      const cleanedCompany = sanitizeCompanyEntityLabel(entityLabel);
+      if (!cleanedCompany) continue;
+      const companyId = companyNodeId(companyKeyFromName(cleanedCompany));
       builder.addNode({
         id: companyId,
         type: "company",
-        label: entityLabel,
+        label: cleanedCompany,
         meta: {
           companyId: companyId.replace(/^company:/, ""),
           relatedFundIds: claim.linkedFundIds,

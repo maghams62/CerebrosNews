@@ -11,7 +11,7 @@ import {
   PortfolioOverlapConfig,
 } from "@/components/fundgraph/graphAnalyzer/types";
 import { citationCountForDealFact, dealFactByCompanyName, isDealFactVerified } from "@/lib/fundgraph/dealFacts";
-import { getPortfolioCompanyProfile } from "@/lib/fundgraph/fundEntityProfiles";
+import { getPortfolioCompanyProfile, sanitizePortfolioCompanyName } from "@/lib/fundgraph/fundEntityProfiles";
 import { Fund, Signal } from "@/lib/fundgraph/types";
 
 const MAX_THEME_SIGNALS = 280;
@@ -25,6 +25,38 @@ const MENTIONS = "MENTIONS" as const;
 const SUPPORTED_BY = "SUPPORTED_BY" as const;
 const CO_INVESTED = "CO_INVESTED" as const;
 const CONTRADICTS = "CONTRADICTS" as const;
+
+const GRAPH_NOISE_COMPANY_TOKENS = new Set([
+  "all",
+  "announcement",
+  "announcements",
+  "capital",
+  "cli",
+  "founder",
+  "funding",
+  "insights",
+  "investment",
+  "map",
+  "maps",
+  "market",
+  "newsroom",
+  "now",
+  "ops",
+  "other",
+  "practices",
+  "series",
+  "software",
+  "stories",
+  "story",
+  "tech",
+  "their",
+  "themes",
+  "this",
+  "today",
+  "topics",
+  "we",
+  "why",
+]);
 
 function asNumber(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
@@ -48,6 +80,42 @@ function normalizeToken(input: string): string {
     .trim()
     .replace(/[^a-z0-9\s]/g, " ")
     .replace(/\s+/g, " ");
+}
+
+function sanitizeCompanyLabel(raw: string): string | null {
+  const cleaned = sanitizePortfolioCompanyName(raw);
+  if (!cleaned) return null;
+
+  const normalized = normalizeToken(cleaned);
+  if (!normalized) return null;
+  const tokens = normalized.split(" ").filter(Boolean);
+  if (!tokens.length) return null;
+
+  const badRatio = tokens.filter((token) => GRAPH_NOISE_COMPANY_TOKENS.has(token)).length / tokens.length;
+  if (badRatio >= 0.5) return null;
+
+  return cleaned;
+}
+
+function buildPortfolioCompanyLookup(funds: Fund[]): Set<string> {
+  const lookup = new Set<string>();
+  for (const fund of funds) {
+    for (const company of fund.portfolio ?? []) {
+      const cleaned = sanitizeCompanyLabel(company);
+      if (!cleaned) continue;
+      lookup.add(normalizeToken(cleaned));
+    }
+  }
+  return lookup;
+}
+
+function acceptContextCompanyLabel(raw: string, portfolioLookup: Set<string>): string | null {
+  const cleaned = sanitizeCompanyLabel(raw);
+  if (!cleaned) return null;
+  const key = normalizeToken(cleaned);
+  if (portfolioLookup.has(key)) return cleaned;
+  if (getPortfolioCompanyProfile(cleaned)) return cleaned;
+  return null;
 }
 
 function slugify(input: string): string {
@@ -236,7 +304,10 @@ function fromFundNodeId(nodeId: string): string | null {
   return nodeId.startsWith("fund:") ? nodeId.slice("fund:".length) : null;
 }
 
-function extractPortfolioHintsFromContextGraph(contextGraph: GraphAnalyzerData): ContextPortfolioHints {
+function extractPortfolioHintsFromContextGraph(
+  contextGraph: GraphAnalyzerData,
+  portfolioLookup: Set<string>
+): ContextPortfolioHints {
   const nodeById = new Map(contextGraph.nodes.map((node) => [node.id, node]));
   const scoreByPair = new Map<string, number>();
   const labelByPair = new Map<string, string>();
@@ -257,7 +328,7 @@ function extractPortfolioHintsFromContextGraph(contextGraph: GraphAnalyzerData):
     if (!fundNode || !companyNode) continue;
 
     const fundId = fromFundNodeId(fundNode.id);
-    const companyName = String(companyNode.label ?? "").trim();
+    const companyName = acceptContextCompanyLabel(String(companyNode.label ?? ""), portfolioLookup);
     if (!fundId || !companyName) continue;
 
     const normalizedCompanyKey = normalizeToken(companyName);
@@ -307,11 +378,11 @@ function extractPortfolioHintsFromContextGraph(contextGraph: GraphAnalyzerData):
   };
 }
 
-function mergeCompanyLists(primary: string[], secondary: string[]): string[] {
+function mergeCompanyLists(primary: string[], secondary: string[], portfolioLookup: Set<string>): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
   for (const company of [...primary, ...secondary]) {
-    const label = String(company ?? "").trim();
+    const label = acceptContextCompanyLabel(String(company ?? ""), portfolioLookup);
     if (!label) continue;
     const key = normalizeToken(label);
     if (!key || seen.has(key)) continue;
@@ -322,17 +393,18 @@ function mergeCompanyLists(primary: string[], secondary: string[]): string[] {
 }
 
 function allCompaniesByFund(funds: Fund[], contextGraph?: GraphAnalyzerData): Map<string, string[]> {
+  const portfolioLookup = buildPortfolioCompanyLookup(funds);
   const map = new Map<string, string[]>();
   for (const fund of funds) {
-    map.set(fund.id, [...fund.portfolio]);
+    map.set(fund.id, mergeCompanyLists(fund.portfolio ?? [], [], portfolioLookup));
   }
 
   if (contextGraph) {
-    const hints = extractPortfolioHintsFromContextGraph(contextGraph);
+    const hints = extractPortfolioHintsFromContextGraph(contextGraph, portfolioLookup);
     for (const fund of funds) {
       const existing = map.get(fund.id) ?? [];
       const fromContext = hints.companiesByFundId.get(fund.id) ?? [];
-      map.set(fund.id, mergeCompanyLists(existing, fromContext));
+      map.set(fund.id, mergeCompanyLists(existing, fromContext, portfolioLookup));
     }
   }
 
@@ -653,7 +725,8 @@ function addContradictEdgeIfNeeded(draft: GraphDraft, signal: Signal, signalId: 
 
 function buildCoInvestmentGraph(funds: Fund[], contextGraph?: GraphAnalyzerData): GraphAnalyzerData {
   const draft = new GraphDraft();
-  const contextHints = contextGraph ? extractPortfolioHintsFromContextGraph(contextGraph) : null;
+  const portfolioLookup = buildPortfolioCompanyLookup(funds);
+  const contextHints = contextGraph ? extractPortfolioHintsFromContextGraph(contextGraph, portfolioLookup) : null;
   const portfolioByFund = allCompaniesByFund(funds, contextGraph);
   const { companyToInvestors, investmentMetaByPair } = addPortfolioEdges(draft, funds, {
     portfolioByFund,
@@ -668,7 +741,8 @@ function buildCoInvestmentGraph(funds: Fund[], contextGraph?: GraphAnalyzerData)
 
 function buildFounderNetworkGraph(funds: Fund[], contextGraph?: GraphAnalyzerData): GraphAnalyzerData {
   const draft = new GraphDraft();
-  const contextHints = contextGraph ? extractPortfolioHintsFromContextGraph(contextGraph) : null;
+  const portfolioLookup = buildPortfolioCompanyLookup(funds);
+  const contextHints = contextGraph ? extractPortfolioHintsFromContextGraph(contextGraph, portfolioLookup) : null;
   const portfolioByFund = allCompaniesByFund(funds, contextGraph);
   const { investmentMetaByPair } = addPortfolioEdges(draft, funds, {
     portfolioByFund,
@@ -1002,7 +1076,8 @@ function buildPortfolioOverlapGraph(
 function buildSignalDiffusionGraph(funds: Fund[], signals: Signal[], contextGraph?: GraphAnalyzerData): GraphAnalyzerData {
   const draft = new GraphDraft();
   const resolveFund = buildFundResolver(funds);
-  const contextHints = contextGraph ? extractPortfolioHintsFromContextGraph(contextGraph) : null;
+  const portfolioLookup = buildPortfolioCompanyLookup(funds);
+  const contextHints = contextGraph ? extractPortfolioHintsFromContextGraph(contextGraph, portfolioLookup) : null;
   const portfolioByFund = allCompaniesByFund(funds, contextGraph);
   const { companyToInvestors } = addPortfolioEdges(draft, funds, {
     portfolioByFund,
