@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { FundCard } from "@/components/fundgraph/FundCard";
+import { fundGeoList } from "@/lib/fundgraph/fundEntities";
 import { Fund } from "@/fundgraph/types";
 
 function uniqueSorted(values: string[]): string[] {
@@ -24,9 +25,7 @@ export function FundsExplorerClient({ funds, initialQuery = "" }: { funds: Fund[
     () =>
       [
         "All",
-        ...uniqueSorted(
-          funds.flatMap((fund) => (Array.isArray(fund.geography) && fund.geography.length ? fund.geography : fund.geographies ?? []))
-        ),
+        ...uniqueSorted(funds.flatMap((fund) => fundGeoList(fund))),
       ],
     [funds]
   );
@@ -36,7 +35,7 @@ export function FundsExplorerClient({ funds, initialQuery = "" }: { funds: Fund[
     return funds.filter((fund) => {
       if (sector !== "All" && !(fund.sectors ?? []).some((value) => value === sector)) return false;
       if (stage !== "All" && !(fund.stages ?? []).some((value) => value === stage)) return false;
-      const geos = Array.isArray(fund.geography) && fund.geography.length ? fund.geography : fund.geographies ?? [];
+      const geos = fundGeoList(fund);
       if (geo !== "All" && !geos.includes(geo)) return false;
       if (!q) return true;
 
