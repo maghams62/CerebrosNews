@@ -508,21 +508,6 @@ export function GraphAnalyzerPage({
     });
   }, [activePreset, contextGraph, funds, leftOverlapFundId, rightOverlapFundId, signals]);
 
-  const founderGraph = useMemo(
-    () =>
-      buildPresetGraph({
-        presetId: "FOUNDER_NETWORK",
-        funds,
-        signals,
-        contextGraph,
-        overlapConfig: {
-          leftFundId: "",
-          rightFundId: "",
-        },
-      }),
-    [contextGraph, funds, signals]
-  );
-
   const edgeTypeSourceGraph = useMemo(() => {
     if (!activePreset) return EMPTY_GRAPH;
     const presetIds = relationPresetIdsForEdgeType(edgeTypeFilter, activePreset.id);
@@ -544,6 +529,28 @@ export function GraphAnalyzerPage({
     }
     return merged;
   }, [activePreset, baseGraph, contextGraph, edgeTypeFilter, funds, leftOverlapFundId, rightOverlapFundId, signals]);
+
+  const querySourceGraph = useMemo(() => {
+    if (!activePreset) return EMPTY_GRAPH;
+    const presetIds = relationPresetIdsForEdgeType("ALL", activePreset.id);
+    if (!presetIds.length) return baseGraph;
+
+    let merged = baseGraph;
+    for (const augmentPresetId of presetIds) {
+      const augmentGraph = buildPresetGraph({
+        presetId: augmentPresetId,
+        funds,
+        signals,
+        contextGraph,
+        overlapConfig: {
+          leftFundId: leftOverlapFundId,
+          rightFundId: rightOverlapFundId,
+        },
+      });
+      merged = mergeGraphData(merged, augmentGraph);
+    }
+    return merged;
+  }, [activePreset, baseGraph, contextGraph, funds, leftOverlapFundId, rightOverlapFundId, signals]);
 
   const requiredEdgeNodeTypes = useMemo(
     () => requiredNodeTypesForEdgeType(edgeTypeSourceGraph, edgeTypeFilter),
@@ -598,51 +605,27 @@ export function GraphAnalyzerPage({
 
   const queryGraph = useMemo(() => {
     if (!activePreset) return EMPTY_GRAPH;
-    const queryEntityTypes = {
-      ...effectiveEntityTypeEnabled,
-    };
-    queryEntityTypes.fund = true;
-    queryEntityTypes.company = true;
-    queryEntityTypes.person = true;
-
-    const primaryQueryGraph = applyGraphFilters(edgeTypeSourceGraph, {
-      timeline,
-      hopDepth,
-      verifiedOnly,
-      sector,
-      stage,
-      edgeType: edgeTypeFilter,
-      minCitationCount,
-      entityTypeEnabled: queryEntityTypes,
+    // Query mode intentionally ignores current filters and focus.
+    return applyGraphFilters(querySourceGraph, {
+      timeline: "ALL",
+      hopDepth: Math.max(1, limits.graphDepth),
+      verifiedOnly: false,
+      sector: "ALL",
+      stage: "ALL",
+      edgeType: "ALL",
+      minCitationCount: 0,
+      entityTypeEnabled: {
+        fund: true,
+        company: true,
+        person: true,
+        claim: true,
+        source: true,
+        signal: true,
+        theme: true,
+      },
       focusNodeId: "",
     });
-
-    const founderQueryGraph = applyGraphFilters(founderGraph, {
-      timeline,
-      hopDepth,
-      verifiedOnly,
-      sector,
-      stage,
-      edgeType: edgeTypeFilter,
-      minCitationCount,
-      entityTypeEnabled: queryEntityTypes,
-      focusNodeId: "",
-    });
-
-    return mergeGraphData(primaryQueryGraph, founderQueryGraph);
-  }, [
-    activePreset,
-    edgeTypeSourceGraph,
-    edgeTypeFilter,
-    effectiveEntityTypeEnabled,
-    founderGraph,
-    hopDepth,
-    minCitationCount,
-    sector,
-    stage,
-    timeline,
-    verifiedOnly,
-  ]);
+  }, [activePreset, limits.graphDepth, querySourceGraph]);
 
   useEffect(() => {
     if (!queryResult?.focusNodeId) return;
@@ -776,6 +759,9 @@ export function GraphAnalyzerPage({
       return;
     }
 
+    // Query results override manual focus selection.
+    setFocusNodeId("");
+
     const directResult = runGraphQuery(trimmed, queryGraph);
     const directHasHighlight = directResult.highlightedNodeIds.length > 0 || directResult.highlightedEdgeIds.length > 0;
     if (directHasHighlight) {
@@ -783,9 +769,6 @@ export function GraphAnalyzerPage({
       setQueryResolving(false);
       setQueryResult(directResult);
       setQuery(trimmed);
-      if (directResult.focusNodeId) {
-        setFocusNodeId(directResult.focusNodeId);
-      }
       setSelectedNodeId(directResult.focusNodeId ?? "");
       setSelectedEdgeId(directResult.highlightedEdgeIds[0] ?? "");
       setHoveredEdgeId("");
@@ -834,9 +817,6 @@ export function GraphAnalyzerPage({
     if (requestSeq !== queryRequestSeqRef.current) return;
     setQueryResult(result);
     setQuery(canonicalQuery);
-    if (result.focusNodeId) {
-      setFocusNodeId(result.focusNodeId);
-    }
     setSelectedNodeId(result.focusNodeId ?? "");
     setSelectedEdgeId(result.highlightedEdgeIds[0] ?? "");
     setHoveredEdgeId("");
