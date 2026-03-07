@@ -883,10 +883,45 @@ export function GraphAnalyzerPage({
   const displaySourceGraph = useMemo(() => {
     const fromQuery = buildQueryResultSubgraph(queryGraph, queryResult, hopDepth);
     if (fromQuery && fromQuery.nodes.length) {
+      const queryEntityTypeEnabled = {
+        ...effectiveEntityTypeEnabled,
+        fund: true,
+        company: true,
+        person: true,
+      };
+
+      const refinedByActiveControls = applyGraphFilters(fromQuery, {
+        timeline,
+        hopDepth,
+        verifiedOnly,
+        sector,
+        stage,
+        edgeType: edgeTypeFilter,
+        minCitationCount,
+        entityTypeEnabled: queryEntityTypeEnabled,
+        focusNodeId,
+      });
+
+      if (refinedByActiveControls.nodes.length) {
+        return refinedByActiveControls;
+      }
       return fromQuery;
     }
     return filteredGraph;
-  }, [filteredGraph, hopDepth, queryGraph, queryResult]);
+  }, [
+    edgeTypeFilter,
+    effectiveEntityTypeEnabled,
+    filteredGraph,
+    focusNodeId,
+    hopDepth,
+    minCitationCount,
+    queryGraph,
+    queryResult,
+    sector,
+    stage,
+    timeline,
+    verifiedOnly,
+  ]);
 
   const displayPayload = useMemo(
     () =>
