@@ -1063,6 +1063,10 @@ export function GraphAnalyzerPage({
             }}
             disabled={loading || queryResolving || !queryGraph.nodes.length}
           />
+          <p className="mt-2 text-xs text-slate-600">
+            You can type a natural-language query, or leave the query empty and use Focus/filters to navigate the graph. Active
+            filters can also refine query results.
+          </p>
 
           {queryResult ? (
             <section className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
