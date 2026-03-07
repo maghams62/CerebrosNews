@@ -1,25 +1,17 @@
 import { FormEvent } from "react";
 
 const DEFAULT_EXAMPLES = [
+  "who co-invests with Alexandr Wang",
+  "funds linked to ElevenLabs",
+  "founders of companies Andreessen Horowitz invested in",
   "path between OpenAI and Andreessen Horowitz",
   "how is Stripe connected to Sequoia Capital",
-  "find connection from Databricks to Benchmark",
   "companies Lightspeed invested in",
-  "what did YC invest in",
   "show me the portfolio of General Catalyst",
-  "which companies does Accel back",
-  "founders Sequoia Capital invested in",
-  "founders of companies Andreessen Horowitz invested in",
-  "path between Stripe and Sequoia Capital",
   "funds investing in AI",
   "who is active in developer tools",
-  "companies linked to Anthropic",
-  "who co-invests with Sequoia Capital",
-  "who co-invests with Andreessen Horowitz on AI startups",
-  "startups around ElevenLabs",
   "companies funded by both Sequoia Capital and Andreessen Horowitz",
-  "common investments between Accel and Benchmark",
-  "portfolio overlap between First Round Capital and Bessemer Venture Partners",
+  "portfolio overlap between First Round Capital and Bessemer Venture Partners"
 ];
 
 export function GraphQueryBar({
@@ -65,7 +57,8 @@ export function GraphQueryBar({
         </button>
       </form>
 
-      <div className="mt-3 flex flex-wrap gap-2">
+      <p className="mt-3 text-[11px] font-semibold tracking-[0.08em] text-slate-500 uppercase">Try Examples (Click To Run)</p>
+      <div className="mt-2 flex flex-wrap gap-2">
         {(examples?.length ? examples : DEFAULT_EXAMPLES).map((example) => (
           <button
             key={example}

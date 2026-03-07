@@ -11,11 +11,13 @@ import {
   PortfolioOverlapConfig,
 } from "@/components/fundgraph/graphAnalyzer/types";
 import { citationCountForDealFact, dealFactByCompanyName, isDealFactVerified } from "@/lib/fundgraph/dealFacts";
+import { getPortfolioCompanyProfile } from "@/lib/fundgraph/fundEntityProfiles";
 import { Fund, Signal } from "@/lib/fundgraph/types";
 
 const MAX_THEME_SIGNALS = 280;
 const MAX_DIFFUSION_SIGNALS = 320;
 const MAX_CONTEXT_PORTFOLIO_PER_FUND = 64;
+const MAX_PROFILE_FOUNDERS_PER_COMPANY = 2;
 
 const INVESTED_IN = "INVESTED_IN" as const;
 const FOUNDED = "FOUNDED" as const;
@@ -668,45 +670,67 @@ function buildFounderNetworkGraph(funds: Fund[], contextGraph?: GraphAnalyzerDat
   const draft = new GraphDraft();
   const contextHints = contextGraph ? extractPortfolioHintsFromContextGraph(contextGraph) : null;
   const portfolioByFund = allCompaniesByFund(funds, contextGraph);
-  addPortfolioEdges(draft, funds, {
+  const { investmentMetaByPair } = addPortfolioEdges(draft, funds, {
     portfolioByFund,
     contextMetaByPair: contextHints?.metaByPair,
   });
+  const founderCompanySeen = new Set<string>();
 
   for (const fund of funds) {
+    const fundNodeId = toFundNodeId(fund.id);
     const companies = portfolioByFund.get(fund.id) ?? fund.portfolio;
     if (!companies.length) continue;
 
-    const people = Array.from(
-      new Set([
-        ...(fund.founders ?? []),
-        ...(fund.gpNames ?? []),
-        ...(fund.gp?.name ? [fund.gp.name] : []),
-      ])
-    );
+    for (const companyName of companies) {
+      const profile = getPortfolioCompanyProfile(companyName);
+      const founders =
+        profile?.founders
+          ?.map((name) => name.trim())
+          .filter(Boolean)
+          .slice(0, MAX_PROFILE_FOUNDERS_PER_COMPANY) ?? [];
+      if (!founders.length) continue;
 
-    people.forEach((personName, personIndex) => {
-      const trimmed = personName.trim();
-      if (!trimmed) return;
-
-      const personId = toPersonNodeId(trimmed);
-      const companyName = companies[personIndex % companies.length];
       const companyId = toCompanyNodeId(companyName);
+      const investmentMeta = investmentMetaByPair.get(`${fundNodeId}|${companyId}`);
+      const sourceRefs = profile?.url
+        ? [
+            {
+              id: `company-profile:${slugify(companyName)}`,
+              url: profile.url,
+              title: `${companyName} company profile`,
+              origin: "synthetic",
+            },
+          ]
+        : [];
 
-      draft.addNode(personNode(trimmed, fund));
-      draft.addNode(companyNode(companyName));
-      draft.addEdge({
-        id: `founded:${personId}:${companyId}:${fund.id}`,
-        source: personId,
-        target: companyId,
-        type: FOUNDED,
-        weight: 0.85,
-        meta: {
-          fundId: fund.id,
-          fundName: fund.name,
-        },
-      });
-    });
+      for (const founderName of founders) {
+        const pairKey = `${normalizeToken(founderName)}|${normalizeToken(companyName)}`;
+        if (!pairKey || founderCompanySeen.has(pairKey)) continue;
+        founderCompanySeen.add(pairKey);
+
+        const personId = toPersonNodeId(founderName);
+
+        draft.addNode(personNode(founderName, fund));
+        draft.addNode(companyNode(companyName));
+        draft.addEdge({
+          id: `founded:${personId}:${companyId}`,
+          source: personId,
+          target: companyId,
+          type: FOUNDED,
+          weight: 0.94,
+          meta: {
+            fundId: fund.id,
+            fundName: fund.name,
+            companyName,
+            verified: investmentMeta?.verified ?? Boolean(profile?.url),
+            citationCount: Math.max(investmentMeta?.citationCount ?? 0, sourceRefs.length ? 1 : 0),
+            sourceRefs,
+            metricSource: "company_profile",
+            metricEligible: true,
+          },
+        });
+      }
+    }
   }
 
   return draft.data();
@@ -2027,6 +2051,7 @@ function parseFundedByBothCommand(phrase: string): QueryCommand | null {
 function parseCompaniesLinkedCommand(phrase: string): QueryCommand | null {
   const patterns = [
     /\b(?:companies|startups)(?:\s+that\s+are)?\s+(?:linked|connected|related)\s+to\s+(.+?)(?:[?.!,]|$)/i,
+    /\b(?:funds|investors?)(?:\s+that\s+are)?\s+(?:linked|connected|related)\s+to\s+(.+?)(?:[?.!,]|$)/i,
     /\bwhat\s+(?:companies|startups)\s+are\s+(?:around|adjacent\s+to|neighbors?\s+of)\s+(.+?)(?:[?.!,]|$)/i,
     /\bshow\s+me\s+(?:the\s+)?(?:companies|startups)\s+(?:around|connected\s+to|linked\s+to)\s+(.+?)(?:[?.!,]|$)/i,
     /\b(?:who|which\s+(?:funds|investors))\s+(?:co[\s-]?invest(?:s|ed|ing|ors?)?|invest(?:s|ors?)\s+alongside)\s+(?:with\s+)?(.+?)(?:[?.!,]|$)/i,
@@ -2577,6 +2602,101 @@ function runCompaniesLinkedQuery(query: string, graph: GraphAnalyzerData, entity
     const companies = fundCompanyMap.get(fundId) ?? new Set<string>();
     companies.add(companyId);
     fundCompanyMap.set(fundId, companies);
+  }
+
+  const wantsFundResults = /\b(?:funds?|investors?)\b/i.test(query) || /\bco[\s-]?invest(?:s|ed|ing|ors?)?\b/i.test(query);
+  if (wantsFundResults || match.type === "person") {
+    const anchorCompanyIds = new Set<string>();
+    if (match.type === "company") {
+      anchorCompanyIds.add(match.id);
+    } else if (match.type === "person") {
+      for (const edge of graph.edges) {
+        if (edge.type !== FOUNDED) continue;
+        const companyId = edge.source === match.id ? edge.target : edge.target === match.id ? edge.source : "";
+        const companyNode = graph.nodes.find((node) => node.id === companyId);
+        if (companyNode?.type === "company") {
+          anchorCompanyIds.add(companyId);
+        }
+      }
+    } else if (match.type === "fund") {
+      for (const edge of graph.edges) {
+        if (edge.type !== INVESTED_IN) continue;
+        const companyId = edge.source === match.id ? edge.target : edge.target === match.id ? edge.source : "";
+        const companyNode = graph.nodes.find((node) => node.id === companyId);
+        if (companyNode?.type === "company") {
+          anchorCompanyIds.add(companyId);
+        }
+      }
+    }
+
+    const rankedFunds = graph.nodes
+      .filter((node) => node.type === "fund" && node.id !== match.id)
+      .map((fundNode) => {
+        const sharedCompanies: string[] = [];
+        for (const companyId of anchorCompanyIds) {
+          const companyFunds = companyFundMap.get(companyId) ?? new Set<string>();
+          if (companyFunds.has(fundNode.id)) sharedCompanies.push(companyId);
+        }
+        const citationScore = graph.edges
+          .filter(
+            (edge) =>
+              edge.type === INVESTED_IN &&
+              ((edge.source === fundNode.id && sharedCompanies.includes(edge.target)) ||
+                (edge.target === fundNode.id && sharedCompanies.includes(edge.source)))
+          )
+          .reduce((sum, edge) => sum + asNumber(edge.meta?.citationCount), 0);
+        const score = sharedCompanies.length * 24 + citationScore * 4 + asNumber(fundNode.meta?.trendScore) * 0.2;
+        return {
+          fundNode,
+          sharedCompanies,
+          score,
+        };
+      })
+      .filter((entry) => entry.sharedCompanies.length > 0)
+      .sort((left, right) => right.score - left.score || left.fundNode.label.localeCompare(right.fundNode.label))
+      .slice(0, 10);
+
+    const highlightedNodeIds = new Set<string>([match.id]);
+    const highlightedEdgeIds = new Set<string>();
+    const steps = rankedFunds.slice(0, 6).map((entry, idx) => {
+      highlightedNodeIds.add(entry.fundNode.id);
+      const sampleCompanyId = entry.sharedCompanies[0];
+      const sampleCompany = graph.nodes.find((node) => node.id === sampleCompanyId && node.type === "company");
+      if (sampleCompany) {
+        highlightedNodeIds.add(sampleCompany.id);
+        const investEdge = edgeByEndpoints(graph, entry.fundNode.id, sampleCompany.id);
+        if (investEdge) highlightedEdgeIds.add(investEdge.id);
+        const founderEdge = edgeByEndpoints(graph, match.id, sampleCompany.id);
+        if (founderEdge) highlightedEdgeIds.add(founderEdge.id);
+        if (sampleCompany.id === match.id) {
+          return `Step ${idx + 1}: ${entry.fundNode.label} is linked through an investment in ${match.label}.`;
+        }
+        return `Step ${idx + 1}: ${entry.fundNode.label} links to ${match.label} via ${sampleCompany.label}.`;
+      }
+      return `Step ${idx + 1}: ${entry.fundNode.label} is connected to ${match.label}.`;
+    });
+
+    if (!rankedFunds.length) {
+      const fallbackEdges = collectIncidentEdges(graph, new Set([match.id])).slice(0, 18);
+      for (const edge of fallbackEdges) {
+        highlightedEdgeIds.add(edge.id);
+        highlightedNodeIds.add(edge.source);
+        highlightedNodeIds.add(edge.target);
+      }
+    }
+
+    return {
+      query,
+      summary: `Identified ${rankedFunds.length} fund${rankedFunds.length === 1 ? "" : "s"} linked to ${match.label}.`,
+      highlightedNodeIds: Array.from(highlightedNodeIds),
+      highlightedEdgeIds: Array.from(highlightedEdgeIds),
+      steps,
+      focusNodeId: match.id,
+      explain: {
+        intent: "companies_linked",
+        entities: [match.label],
+      },
+    };
   }
 
   const adjacency = buildAdjacency(graph.edges);

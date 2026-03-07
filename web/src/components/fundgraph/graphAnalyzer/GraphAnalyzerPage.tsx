@@ -598,30 +598,48 @@ export function GraphAnalyzerPage({
     const portfolioFund = topFunds[0] ?? "Sequoia Capital";
     const secondPortfolioFund = topFunds[1] ?? "Andreessen Horowitz";
     const themeQuery = "AI infrastructure";
-    const dynamicCandidates = [
-      "path between OpenAI and Andreessen Horowitz",
-      "how is OpenAI connected to Andreessen Horowitz",
-      "companies linked to ElevenLabs",
+    const pinnedExamples = [
+      "who co-invests with Alexandr Wang",
+      "funds linked to ElevenLabs",
+      "founders of companies Andreessen Horowitz invested in",
       `companies ${portfolioFund} invested in`,
+      `companies funded by both ${overlapLeft} and ${overlapRight}`,
+      `path between ${pathLeft} and ${pathRight}`,
+      `funds investing in ${themeQuery}`,
+    ];
+    const dynamicCandidates = [
       `show me the portfolio of ${portfolioFund}`,
       `what did ${portfolioFund} invest in`,
       `which companies does ${portfolioFund} back`,
-      "founders of companies Andreessen Horowitz invested in",
+      "path between OpenAI and Andreessen Horowitz",
+      "how is OpenAI connected to Andreessen Horowitz",
       `path between ${pathLeft} and ${pathRight}`,
       `path between ${secondPathLeft} and ${overlapLeft}`,
       `companies linked to ${linkedEntity}`,
       `companies funded by both ${overlapLeft} and ${overlapRight}`,
       `common investments between ${overlapLeft} and ${overlapRight}`,
       `who co-invests with ${portfolioFund}`,
-      "who co-invests with Andreessen Horowitz on AI startups",
       `funds investing in ${themeQuery}`,
       `who is active in ${themeQuery}`,
       `portfolio overlap between ${portfolioFund} and ${secondPortfolioFund}`,
       `startups around ${linkedEntity}`,
     ];
-    const uniqueCandidates = Array.from(
-      new Set([...dynamicCandidates, ...DISAMBIGUATION_QUERY_LIBRARY].map((candidate) => candidate.trim()).filter(Boolean))
-    );
+
+    const dedupeCaseInsensitive = (values: string[]): string[] => {
+      const out: string[] = [];
+      const seen = new Set<string>();
+      for (const value of values) {
+        const normalized = value.trim();
+        if (!normalized) continue;
+        const key = normalized.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(normalized);
+      }
+      return out;
+    };
+
+    const uniqueCandidates = dedupeCaseInsensitive([...pinnedExamples, ...dynamicCandidates, ...DISAMBIGUATION_QUERY_LIBRARY]);
 
     const viable = uniqueCandidates.filter((candidate) => {
       const result = runGraphQuery(candidate, queryGraph);
@@ -629,8 +647,31 @@ export function GraphAnalyzerPage({
     });
 
     const ranked = viable.length ? viable : uniqueCandidates;
+    const intentBucket = (queryText: string): string => {
+      const text = queryText.toLowerCase();
+      if (/\bco[\s-]?invest|linked to|around\b/.test(text)) return "linked";
+      if (/\bfounders?\b/.test(text)) return "founders";
+      if (/\bpath|connected|relationship\b/.test(text)) return "path";
+      if (/\bboth|common|overlap\b/.test(text)) return "overlap";
+      if (/\binvesting in|active in|focused\b/.test(text)) return "theme";
+      if (/\bportfolio|invested in|what did\b/.test(text)) return "portfolio";
+      return "search";
+    };
+
+    const chipExamples: string[] = [];
+    const bucketCounts = new Map<string, number>();
+    for (const candidate of dedupeCaseInsensitive([...pinnedExamples, ...ranked])) {
+      const bucket = intentBucket(candidate);
+      const count = bucketCounts.get(bucket) ?? 0;
+      const isPinned = pinnedExamples.some((item) => item.toLowerCase() === candidate.toLowerCase());
+      if (!isPinned && count >= 2) continue;
+      chipExamples.push(candidate);
+      bucketCounts.set(bucket, count + 1);
+      if (chipExamples.length >= 12) break;
+    }
+
     return {
-      chipExamples: ranked.slice(0, 10),
+      chipExamples,
       llmExamples: ranked.slice(0, 24),
     };
   }, [funds, queryGraph]);
